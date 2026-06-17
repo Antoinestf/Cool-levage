@@ -50,7 +50,7 @@ function genererAlertes(): Alerte[] {
   try {
     const cheptel: Lapin[]  = JSON.parse(localStorage.getItem("ferme_cheptel")  || "[]");
     const saillies: Saillie[] = JSON.parse(localStorage.getItem("ferme_reproduction") || "[]");
-    const stocks: Stock[]   = JSON.parse(localStorage.getItem("ferme_stocks")   || "[]");
+    const stocks: Stock[]   = JSON.parse(localStorage.getItem("ferme_stocks_v2") || "[]");
 
     // Palpations
     for (const s of saillies) {

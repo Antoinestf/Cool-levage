@@ -26,7 +26,6 @@ const NAV_LINKS = [
   { href: "/provende",     icon: "🌾", label: "Provende"    },
   { href: "/performances", icon: "📈", label: "Perfs"       },
   { href: "/genealogie",   icon: "🌳", label: "Généalogie"  },
-  
 ];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

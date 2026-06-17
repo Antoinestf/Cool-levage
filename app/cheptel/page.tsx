@@ -14,6 +14,7 @@ interface Lapin {
   id: string;
   tatouage: string;
   sexe: 'M' | 'F';
+  statut: 'Reproducteur' | 'Engraissement' | 'Jeune' | 'Vente';
   dateNaissance: string;
   race: string;
   pere?: string;
@@ -28,7 +29,7 @@ export default function CheptelPage() {
   const recognitionRef = useRef<any>(null);
 
   const [nouveauLapin, setNouveauLapin] = useState<Omit<Lapin, 'id'>>({
-    tatouage: '', sexe: 'M', dateNaissance: '', race: '', pere: '', mere: '', soins: [],
+    tatouage: '', sexe: 'M', statut: 'Reproducteur', dateNaissance: '', race: '', pere: '', mere: '', soins: [],
   });
 
   const [viewMode, setViewMode]     = useState<'liste' | 'bloc'>('bloc');
@@ -105,7 +106,7 @@ export default function CheptelPage() {
     e.preventDefault();
     if (!nouveauLapin.tatouage.trim()) return;
     setCheptel(prev => [...prev, { ...nouveauLapin, id: Date.now().toString(), soins: [] }]);
-    setNouveauLapin({ tatouage: '', sexe: 'M', dateNaissance: '', race: '', pere: '', mere: '', soins: [] });
+    setNouveauLapin({ tatouage: '', sexe: 'M', statut: 'Reproducteur', dateNaissance: '', race: '', pere: '', mere: '', soins: [] });
     setFormOpen(false);
   };
 
@@ -166,6 +167,17 @@ export default function CheptelPage() {
                 className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white">
                 <option value="M">♂ Mâle</option>
                 <option value="F">♀ Femelle</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">Rôle</label>
+              <select value={nouveauLapin.statut}
+                onChange={e => setNouveauLapin(p => ({ ...p, statut: e.target.value as Lapin['statut'] }))}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white">
+                <option value="Reproducteur">🐇 Reproducteur</option>
+                <option value="Engraissement">🌾 Engraissement</option>
+                <option value="Jeune">🐣 Jeune</option>
+                <option value="Vente">💰 À vendre</option>
               </select>
             </div>
             <div>
@@ -252,7 +264,7 @@ export default function CheptelPage() {
                     <span className="text-lg">{estMale ? '🐇' : '🐰'}</span>
                     <div className="min-w-0">
                       <p className="font-extrabold text-gray-900 uppercase leading-none truncate">{lapin.tatouage}</p>
-                      <p className="text-[10px] text-gray-500">{lapin.race || 'Race inconnue'}{age !== null ? ` · ${age} mois` : ''}</p>
+                      <p className="text-[10px] text-gray-500">{lapin.race || 'Race inconnue'}{age !== null ? ` · ${age} mois` : ''} · {lapin.statut || 'Reproducteur'}</p>
                     </div>
                   </div>
                   <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${estMale ? 'bg-blue-200 text-blue-800' : 'bg-purple-200 text-purple-800'}`}>
