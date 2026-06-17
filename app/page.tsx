@@ -1,65 +1,422 @@
-import Image from "next/image";
+"use client";
+import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import MeteoWidget from '@/components/MeteoWidget';
 
-export default function Home() {
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface Lapin {
+  id: number;
+  tatouage: string;
+  sexe: string;
+  statut: string;
+  archive?: boolean;
+  soins?: { date: string; type: string; note: string }[];
+}
+
+interface Saillie {
+  id: string;
+  tatouageFemelle: string;
+  tatouageMale: string;
+  dateSaillie: string;
+  datePalpation: string;
+  dateMiseBas: string;
+  dateSevrage: string;
+  statut: 'En attente' | 'Gestante' | 'Vide' | 'Mise-bas terminée';
+  notes: string;
+}
+
+interface Stock {
+  id: string;
+  type: string;
+  quantiteKg: number;
+  seuilAlerte: number;
+}
+
+type NiveauAlerte = 'danger' | 'warning' | 'info';
+
+interface Alerte {
+  id: string;
+  niveau: NiveauAlerte;
+  titre: string;
+  message: string;
+  lien: string;
+  lienLabel: string;
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const diffJours = (dateStr: string): number => {
+  const aujourd = new Date();
+  aujourd.setHours(0, 0, 0, 0);
+  const cible = new Date(dateStr);
+  cible.setHours(0, 0, 0, 0);
+  return Math.round((cible.getTime() - aujourd.getTime()) / 86400000);
+};
+
+const fmt = (dateStr: string): string => {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-');
+  return `${d}/${m}/${y}`;
+};
+
+// ─── Composants UI ───────────────────────────────────────────────────────────
+
+const StatCard = ({
+  titre, valeur, sous, couleur, href
+}: { titre: string; valeur: number | string; sous?: string; couleur: string; href: string }) => (
+  <Link href={href} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow block group">
+    <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider">{titre}</p>
+    <p className={`text-4xl font-extrabold mt-1 ${couleur} group-hover:scale-105 transition-transform inline-block`}>{valeur}</p>
+    {sous && <p className="text-gray-400 text-xs mt-1">{sous}</p>}
+  </Link>
+);
+
+const STYLES_ALERTE: Record<NiveauAlerte, { card: string; badge: string; icone: string }> = {
+  danger:  { card: 'bg-red-50 border-red-200',    badge: 'bg-red-100 text-red-700',    icone: '🔴' },
+  warning: { card: 'bg-amber-50 border-amber-200', badge: 'bg-amber-100 text-amber-700',icone: '🟠' },
+  info:    { card: 'bg-blue-50 border-blue-200',   badge: 'bg-blue-100 text-blue-700',  icone: '🔵' },
+};
+
+const CarteAlerte = ({ alerte }: { alerte: Alerte }) => {
+  const s = STYLES_ALERTE[alerte.niveau];
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className={`border rounded-xl p-4 flex items-start gap-3 ${s.card}`}>
+      <span className="text-lg mt-0.5 shrink-0">{s.icone}</span>
+      <div className="flex-1 min-w-0">
+        <p className="font-bold text-gray-900 text-sm">{alerte.titre}</p>
+        <p className="text-gray-600 text-xs mt-0.5 leading-relaxed">{alerte.message}</p>
+      </div>
+      <Link
+        href={alerte.lien}
+        className={`text-xs font-bold px-3 py-1.5 rounded-lg shrink-0 ${s.badge} hover:opacity-80 transition-opacity`}
+      >
+        {alerte.lienLabel} →
+      </Link>
+    </div>
+  );
+};
+
+// ─── Page principale ─────────────────────────────────────────────────────────
+
+export default function TableauDeBord() {
+  const [cheptel, setCheptel]       = useState<Lapin[]>([]);
+  const [saillies, setSaillies]     = useState<Saillie[]>([]);
+  const [stocks, setStocks]         = useState<Stock[]>([]);
+  const [isLoaded, setIsLoaded]     = useState(false);
+  const [alerteChaleur, setAlerteChaleur] = useState<number | null>(null);
+
+  const handleChaleur = useCallback((tempMax: number) => {
+    setAlerteChaleur(tempMax);
+  }, []);
+
+  useEffect(() => {
+    const c = localStorage.getItem('ferme_cheptel');
+    const r = localStorage.getItem('ferme_reproduction');
+    const s = localStorage.getItem('ferme_stocks_v2');
+    if (c) setCheptel(JSON.parse(c));
+    if (r) setSaillies(JSON.parse(r));
+    if (s) setStocks(JSON.parse(s));
+    setIsLoaded(true);
+  }, []);
+
+  if (!isLoaded) return <div className="p-8 text-gray-400 italic">Chargement de la ferme…</div>;
+
+  // ── Stats cheptel ──────────────────────────────────────────────────────────
+  const actifs       = cheptel.filter(l => !l.archive);
+  const males        = actifs.filter(l => l.sexe?.trim().toUpperCase() === 'M');
+  const femelles     = actifs.filter(l => l.sexe?.trim().toUpperCase() === 'F');
+  const reproducteurs= actifs.filter(l => l.statut === 'Reproducteur');
+  const engraissement= actifs.filter(l => l.statut === 'Engraissement');
+  const totalSoins   = actifs.reduce((acc, l) => acc + (l.soins?.length || 0), 0);
+
+  // ── Stats reproduction ────────────────────────────────────────────────────
+  const gestantes    = saillies.filter(s => s.statut === 'Gestante');
+  const enAttente    = saillies.filter(s => s.statut === 'En attente');
+
+  // ── Génération des alertes intelligentes ──────────────────────────────────
+  const alertes: Alerte[] = [];
+
+  // 1. PALPATIONS À FAIRE
+  //    Saillies "En attente" dont la date de palpation est passée ou aujourd'hui
+  enAttente
+    .filter(s => diffJours(s.datePalpation) <= 0)
+    .forEach(s => {
+      const j = diffJours(s.datePalpation);
+      const retard = j === 0 ? "aujourd'hui" : `il y a ${Math.abs(j)} jour${Math.abs(j) > 1 ? 's' : ''}`;
+      alertes.push({
+        id: `palp-${s.id}`,
+        niveau: j < -2 ? 'danger' : 'warning',
+        titre: `Palpation à faire — ${s.tatouageFemelle}`,
+        message: `La femelle ${s.tatouageFemelle} (saillie du ${fmt(s.dateSaillie)} avec ${s.tatouageMale}) doit être palpée ${retard}. Confirmez si elle est gestante ou vide.`,
+        lien: '/naissances',
+        lienLabel: 'Ouvrir Reproduction',
+      });
+    });
+
+  // 2. MISES-BAS IMMINENTES
+  //    Gestantes dont la mise-bas est dans ≤ 5 jours
+  gestantes
+    .filter(s => diffJours(s.dateMiseBas) <= 5)
+    .forEach(s => {
+      const j = diffJours(s.dateMiseBas);
+      const quand = j === 0 ? "aujourd'hui !" : j < 0 ? `en retard de ${Math.abs(j)}j` : `dans ${j} jour${j > 1 ? 's' : ''}`;
+      alertes.push({
+        id: `misebas-${s.id}`,
+        niveau: j <= 0 ? 'danger' : 'warning',
+        titre: `Mise-bas imminente — ${s.tatouageFemelle}`,
+        message: `La femelle ${s.tatouageFemelle} doit mettre bas ${quand}. Préparez la cage maternité et vérifiez le nid.`,
+        lien: '/naissances',
+        lienLabel: 'Ouvrir Reproduction',
+      });
+    });
+
+  // 3. SEVRAGES À FAIRE
+  //    Gestantes/mise-bas terminée dont la date de sevrage est passée ou dans ≤ 2 jours
+  saillies
+    .filter(s => (s.statut === 'Gestante' || s.statut === 'Mise-bas terminée') && diffJours(s.dateSevrage) <= 2)
+    .forEach(s => {
+      const j = diffJours(s.dateSevrage);
+      const quand = j === 0 ? "aujourd'hui" : j < 0 ? `il y a ${Math.abs(j)} jour${Math.abs(j) > 1 ? 's' : ''}` : `dans ${j} jour${j > 1 ? 's' : ''}`;
+      alertes.push({
+        id: `sevrage-${s.id}`,
+        niveau: j < 0 ? 'danger' : 'info',
+        titre: `Sevrage à effectuer — ${s.tatouageFemelle}`,
+        message: `Les lapereaux de ${s.tatouageFemelle} (portée du ${fmt(s.dateMiseBas)}) doivent être sevrés ${quand}.`,
+        lien: '/naissances',
+        lienLabel: 'Ouvrir Reproduction',
+      });
+    });
+
+  // 4. STOCKS CRITIQUES
+  stocks
+    .filter(s => s.seuilAlerte > 0 && s.quantiteKg <= s.seuilAlerte)
+    .forEach(s => {
+      const pct = Math.round((s.quantiteKg / s.seuilAlerte) * 100);
+      alertes.push({
+        id: `stock-${s.id}`,
+        niveau: s.quantiteKg === 0 ? 'danger' : 'warning',
+        titre: `Stock critique — ${s.type}`,
+        message: `Il ne reste que ${s.quantiteKg} kg de ${s.type} (seuil d'alerte : ${s.seuilAlerte} kg, soit ${pct}% du seuil). Pensez à réapprovisionner.`,
+        lien: '/provende',
+        lienLabel: 'Gérer stocks',
+      });
+    });
+
+  // 5. RATIO MÂLE/FEMELLES
+  if (males.length > 0 && femelles.length > 0) {
+    const ratio = femelles.length / males.length;
+    if (ratio < 5) {
+      alertes.push({
+        id: 'ratio-males',
+        niveau: 'info',
+        titre: `Ratio reproducteurs déséquilibré`,
+        message: `Vous avez ${males.length} mâle${males.length > 1 ? 's' : ''} pour ${femelles.length} femelle${femelles.length > 1 ? 's' : ''} (ratio 1:${ratio.toFixed(1)}). L'optimal est 1 mâle pour 7 à 10 femelles.`,
+        lien: '/cheptel',
+        lienLabel: 'Voir cheptel',
+      });
+    }
+  }
+
+  // 6. ALERTE CHALEUR (injectée depuis le widget météo via callback)
+  if (alerteChaleur !== null && alerteChaleur >= 32) {
+    const conseil = alerteChaleur >= 38
+      ? "Refroidissement d'urgence : eau froide sur les oreilles, ventilateur direct, ombrage total."
+      : alerteChaleur >= 34
+      ? "Doublez l'eau fraîche, mouillez les toitures, suspendez les saillies."
+      : "Augmentez l'apport en eau, mouillez les oreilles, renforcez la ventilation.";
+    alertes.push({
+      id: 'chaleur',
+      niveau: alerteChaleur >= 34 ? 'danger' : 'warning',
+      titre: `🌡️ Vague de chaleur — ${alerteChaleur}°C prévus`,
+      message: `Température critique pour les lapins (seuil : 32°C). ${conseil}`,
+      lien: '/',
+      lienLabel: 'Voir météo',
+    });
+  }
+
+  // 7. CHEPTEL VIDE
+  if (actifs.length === 0) {
+    alertes.push({
+      id: 'cheptel-vide',
+      niveau: 'info',
+      titre: 'Aucun animal dans le cheptel',
+      message: 'Commencez par enregistrer vos premiers reproducteurs pour activer le suivi automatique.',
+      lien: '/cheptel',
+      lienLabel: 'Ajouter lapins',
+    });
+  }
+
+  // Trier : danger d'abord, puis warning, puis info
+  const ordre: NiveauAlerte[] = ['danger', 'warning', 'info'];
+  alertes.sort((a, b) => ordre.indexOf(a.niveau) - ordre.indexOf(b.niveau));
+
+  // Prochaine action urgente (pour le bandeau résumé)
+  const prochaineAction = saillies
+    .filter(s => s.statut === 'En attente' || s.statut === 'Gestante')
+    .map(s => {
+      const d = s.statut === 'En attente' ? s.datePalpation : s.dateMiseBas;
+      return { label: s.statut === 'En attente' ? `Palpation ${s.tatouageFemelle}` : `Mise-bas ${s.tatouageFemelle}`, date: d, j: diffJours(d) };
+    })
+    .filter(a => a.j >= 0)
+    .sort((a, b) => a.j - b.j)[0];
+
+  return (
+    <div className="p-4 md:p-6 bg-gray-50 min-h-screen">
+
+      {/* ── En-tête ─────────────────────────────────────────────────────── */}
+      <header className="mb-5">
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900">Tableau de Bord</h1>
+        <p className="text-gray-400 text-sm mt-1">
+          {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+        </p>
+      </header>
+
+      {/* ── Prochaine échéance ──────────────────────────────────────────── */}
+      {prochaineAction && (
+        <div className="bg-indigo-600 text-white rounded-2xl p-4 mb-6 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold text-indigo-200 uppercase tracking-wider">Prochaine échéance</p>
+            <p className="font-bold text-lg">{prochaineAction.label}</p>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="text-3xl font-extrabold">{prochaineAction.j}j</p>
+            <p className="text-indigo-200 text-xs">{fmt(prochaineAction.date)}</p>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      )}
+
+      {/* ── Cartes stats ────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <StatCard titre="Cheptel actif"   valeur={actifs.length}        sous={`${males.length}♂  ${femelles.length}♀`}  couleur="text-indigo-600"  href="/cheptel" />
+        <StatCard titre="Reproducteurs"   valeur={reproducteurs.length} sous={`${gestantes.length} gestante${gestantes.length > 1 ? 's' : ''}`}    couleur="text-emerald-600" href="/cheptel" />
+        <StatCard titre="En engraissement" valeur={engraissement.length} couleur="text-amber-600"  href="/cheptel" />
+        <StatCard titre="Soins enregistrés" valeur={totalSoins}          couleur="text-blue-600"    href="/cheptel" />
+      </div>
+
+      {/* ── Contenu principal ────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        {/* Alertes intelligentes */}
+        <div className="lg:col-span-2 space-y-3">
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-base font-bold text-gray-800">
+              Alertes actives
+              {alertes.length > 0 && (
+                <span className="ml-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{alertes.length}</span>
+              )}
+            </h2>
+          </div>
+
+          {alertes.length === 0 ? (
+            <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
+              <p className="text-3xl mb-2">✅</p>
+              <p className="font-bold text-green-800">Tout est sous contrôle !</p>
+              <p className="text-green-600 text-sm mt-1">Aucune action urgente détectée.</p>
+            </div>
+          ) : (
+            alertes.map(a => <CarteAlerte key={a.id} alerte={a} />)
+          )}
         </div>
-      </main>
+
+        {/* Panneau latéral */}
+        <div className="space-y-4">
+
+          {/* Widget météo */}
+          <MeteoWidget onChaleurExtrême={handleChaleur} />
+
+          {/* Suivi reproduction */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <h3 className="text-sm font-bold text-gray-700 mb-3">Reproduction en cours</h3>
+            {saillies.filter(s => s.statut !== 'Mise-bas terminée' && s.statut !== 'Vide').length === 0 ? (
+              <p className="text-xs text-gray-400 italic">Aucune saillie active.</p>
+            ) : (
+              <div className="space-y-2">
+                {saillies
+                  .filter(s => s.statut !== 'Mise-bas terminée' && s.statut !== 'Vide')
+                  .slice(0, 5)
+                  .map(s => {
+                    const prochaine = s.statut === 'En attente' ? s.datePalpation : s.dateMiseBas;
+                    const j = diffJours(prochaine);
+                    const label = s.statut === 'En attente' ? 'Palpation' : 'Mise-bas';
+                    const couleur = j < 0 ? 'text-red-600' : j <= 3 ? 'text-amber-600' : 'text-gray-500';
+                    return (
+                      <div key={s.id} className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0">
+                        <div>
+                          <p className="text-xs font-bold text-gray-800">{s.tatouageFemelle}</p>
+                          <p className="text-[10px] text-gray-400">{label}</p>
+                        </div>
+                        <span className={`text-xs font-extrabold ${couleur}`}>
+                          {j === 0 ? "Auj." : j < 0 ? `−${Math.abs(j)}j` : `+${j}j`}
+                        </span>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+            <Link href="/naissances" className="block text-center text-xs font-bold text-indigo-600 mt-3 hover:underline">
+              Voir toutes les reproductions →
+            </Link>
+          </div>
+
+          {/* Stocks */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <h3 className="text-sm font-bold text-gray-700 mb-3">Stocks provende</h3>
+            {stocks.length === 0 ? (
+              <p className="text-xs text-gray-400 italic">Aucun stock enregistré.</p>
+            ) : (
+              <div className="space-y-2">
+                {stocks.slice(0, 5).map(s => {
+                  const pct = s.seuilAlerte > 0 ? Math.min(100, Math.round((s.quantiteKg / (s.seuilAlerte * 3)) * 100)) : 50;
+                  const critique = s.seuilAlerte > 0 && s.quantiteKg <= s.seuilAlerte;
+                  return (
+                    <div key={s.id}>
+                      <div className="flex justify-between text-xs mb-0.5">
+                        <span className={`font-medium ${critique ? 'text-red-600' : 'text-gray-700'}`}>{s.type}</span>
+                        <span className="font-bold text-gray-800">{s.quantiteKg} kg</span>
+                      </div>
+                      <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${critique ? 'bg-red-400' : 'bg-emerald-400'}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <Link href="/provende" className="block text-center text-xs font-bold text-indigo-600 mt-3 hover:underline">
+              Gérer la provende →
+            </Link>
+          </div>
+
+          {/* Répartition sexes */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <h3 className="text-sm font-bold text-gray-700 mb-3">Répartition du cheptel</h3>
+            <div className="space-y-3">
+              {[
+                { label: 'Mâles', count: males.length, color: 'bg-blue-400' },
+                { label: 'Femelles', count: femelles.length, color: 'bg-purple-400' },
+              ].map(({ label, count, color }) => (
+                <div key={label}>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-gray-600">{label}</span>
+                    <span className="font-bold">{count}</span>
+                  </div>
+                  <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                    <div
+                      className={`${color} h-full rounded-full`}
+                      style={{ width: `${actifs.length > 0 ? (count / actifs.length) * 100 : 0}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      </div>
     </div>
   );
 }
