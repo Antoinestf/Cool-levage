@@ -120,13 +120,6 @@ export default function PwaProvider() {
         </div>
       )}
 
-      {/* ── Indicateur SW actif (discret, coin bas-droite) ────────────────── */}
-      {swActif && !estHorsLigne && (
-        <div
-          title="Application disponible hors-ligne"
-          className="fixed bottom-3 right-3 z-[9997] w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_2px_rgba(52,211,153,0.4)]"
-        />
-      )}
     </>
   );
 }
