@@ -84,14 +84,14 @@ export default function NaissancesPage() {
     e.preventDefault();
     const femelle = femelles.find(f => f.id === form.idFemelle);
     const male    = males.find(m => m.id === form.idMale);
-    if (!femelle || !male || !form.dateSaillie) return;
+    if (!femelle || !form.dateSaillie) return;
 
     const nouvelle: Saillie = {
       id: Date.now().toString(),
       idFemelle: femelle.id,
-      idMale: male.id,
+      idMale: male?.id ?? '',
       tatouageFemelle: femelle.tatouage,
-      tatouageMale: male.tatouage,
+      tatouageMale: male?.tatouage ?? 'Inconnu',
       dateSaillie: form.dateSaillie,
       datePalpation: ajouterJours(form.dateSaillie, 14),
       dateMiseBas:   ajouterJours(form.dateSaillie, 31),
@@ -181,12 +181,11 @@ export default function NaissancesPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">♂ Mâle (Père)</label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">♂ Mâle (Père) <span className="text-gray-400 font-normal">— facultatif</span></label>
               <select value={form.idMale}
                 onChange={e => setForm(p => ({ ...p, idMale: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                required>
-                <option value="">-- Sélectionner --</option>
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                <option value="">-- Non renseigné --</option>
                 {males.map(m => <option key={m.id} value={m.id}>{m.tatouage}</option>)}
               </select>
             </div>
