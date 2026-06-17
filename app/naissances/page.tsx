@@ -13,8 +13,8 @@ interface Saillie {
   id: string;
   idFemelle: string;
   tatouageFemelle: string;
-  idMale: string;
-  tatouageMale: string;
+  idMale?: string;
+  tatouageMale?: string;
   dateSaillie: string;
   datePalpation: string;
   dateMiseBas: string;
@@ -75,22 +75,26 @@ export default function ReproductionPage() {
 
   const enregistrerSaillie = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nouvelleSaillie.idFemelle || !nouvelleSaillie.idMale || !nouvelleSaillie.dateSaillie) {
-      alert("Veuillez remplir tous les champs obligatoires.");
+    
+    // 💡 CORRECTION 1 : On ne vérifie plus le mâle ici
+    if (!nouvelleSaillie.idFemelle || !nouvelleSaillie.dateSaillie) {
+      alert("Veuillez remplir au moins la femelle et la date.");
       return;
     }
 
     const femelle = femelles.find(f => f.id === nouvelleSaillie.idFemelle);
     const male = males.find(m => m.id === nouvelleSaillie.idMale);
 
-    if (!femelle || !male) return;
+    // 💡 CORRECTION 2 : On s'assure juste que la femelle existe
+    if (!femelle) return;
 
     const nouvelle: Saillie = {
       id: Date.now().toString(),
       idFemelle: femelle.id,
       tatouageFemelle: femelle.tatouage,
-      idMale: male.id,
-      tatouageMale: male.tatouage,
+      // 💡 CORRECTION 3 : Si le mâle existe on prend ses infos, sinon on ne met rien
+      idMale: male?.id,
+      tatouageMale: male?.tatouage,
       dateSaillie: nouvelleSaillie.dateSaillie,
       // Calculs automatiques des dates clés
       datePalpation: ajouterJours(nouvelleSaillie.dateSaillie, 14),
@@ -140,7 +144,7 @@ export default function ReproductionPage() {
           <h2 className="text-sm font-bold mb-4 text-gray-700">Nouvelle saillie</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">♀ Femelle (Mère)</label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">♀ Femelle (Mère) *</label>
               <select
                 value={nouvelleSaillie.idFemelle}
                 onChange={(e) => setNouvelleSaillie({...nouvelleSaillie, idFemelle: e.target.value})}
@@ -157,14 +161,14 @@ export default function ReproductionPage() {
                 value={nouvelleSaillie.idMale}
                 onChange={(e) => setNouvelleSaillie({...nouvelleSaillie, idMale: e.target.value})}
                 className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                required
+                // 💡 CORRECTION 4 : On a retiré le "required" ici !
               >
-                <option value="">-- Sélectionner --</option>
+                <option value="">-- Inconnu --</option>
                 {males.map(m => <option key={m.id} value={m.id}>{m.tatouage}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">📅 Date de l'accouplement</label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">📅 Date de l'accouplement *</label>
               <input
                 type="date"
                 value={nouvelleSaillie.dateSaillie}
@@ -207,7 +211,8 @@ export default function ReproductionPage() {
                   <div className="flex items-center justify-between gap-2">
                     <div>
                       <p className="font-extrabold text-gray-900 text-base">
-                        ♀ {saillie.tatouageFemelle} <span className="text-gray-400 font-normal text-sm">×</span> ♂ {saillie.tatouageMale}
+                        {/* 💡 CORRECTION 5 : On affiche "Inconnu" si le tatouageMale est vide */}
+                        ♀ {saillie.tatouageFemelle} <span className="text-gray-400 font-normal text-sm">×</span> ♂ {saillie.tatouageMale || 'Inconnu'}
                       </p>
                       <p className="text-xs text-gray-500 mt-0.5">Saillie : {formaterDate(saillie.dateSaillie)}</p>
                     </div>
