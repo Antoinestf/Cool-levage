@@ -65,10 +65,10 @@ const fmt = (dateStr: string): string => {
 const StatCard = ({
   titre, valeur, sous, couleur, href
 }: { titre: string; valeur: number | string; sous?: string; couleur: string; href: string }) => (
-  <Link href={href} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow block group">
-    <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider">{titre}</p>
-    <p className={`text-4xl font-extrabold mt-1 ${couleur} group-hover:scale-105 transition-transform inline-block`}>{valeur}</p>
-    {sous && <p className="text-gray-400 text-xs mt-1">{sous}</p>}
+  <Link href={href} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow block group">
+    <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">{titre}</p>
+    <p className={`text-3xl font-black mt-1 ${couleur} group-hover:scale-105 transition-transform inline-block`}>{valeur}</p>
+    {sous && <p className="text-gray-400 text-[10px] mt-1 font-medium">{sous}</p>}
   </Link>
 );
 
@@ -81,17 +81,17 @@ const STYLES_ALERTE: Record<NiveauAlerte, { card: string; badge: string; icone: 
 const CarteAlerte = ({ alerte }: { alerte: Alerte }) => {
   const s = STYLES_ALERTE[alerte.niveau];
   return (
-    <div className={`border rounded-xl p-4 flex items-start gap-3 ${s.card}`}>
-      <span className="text-lg mt-0.5 shrink-0">{s.icone}</span>
+    <div className={`border rounded-2xl px-4 py-3 flex items-center gap-3 ${s.card}`}>
+      <span className="text-base shrink-0">{s.icone}</span>
       <div className="flex-1 min-w-0">
-        <p className="font-bold text-gray-900 text-sm">{alerte.titre}</p>
-        <p className="text-gray-600 text-xs mt-0.5 leading-relaxed">{alerte.message}</p>
+        <p className="font-bold text-gray-900 text-sm leading-tight">{alerte.titre}</p>
+        <p className="text-gray-500 text-xs mt-0.5 truncate">{alerte.message}</p>
       </div>
       <Link
         href={alerte.lien}
-        className={`text-xs font-bold px-3 py-1.5 rounded-lg shrink-0 ${s.badge} hover:opacity-80 transition-opacity`}
+        className={`text-xs font-bold px-3 py-1.5 rounded-xl shrink-0 ${s.badge} hover:opacity-80 transition-opacity`}
       >
-        {alerte.lienLabel} →
+        Voir →
       </Link>
     </div>
   );
@@ -206,14 +206,14 @@ export default function TableauDeBord() {
     .filter(s => diffJours(s.datePalpation) <= 0)
     .forEach(s => {
       const j = diffJours(s.datePalpation);
-      const retard = j === 0 ? "aujourd'hui" : `il y a ${Math.abs(j)} jour${Math.abs(j) > 1 ? 's' : ''}`;
+      const retard = j === 0 ? "aujourd'hui" : `en retard de ${Math.abs(j)}j`;
       alertes.push({
         id: `palp-${s.id}`,
         niveau: j < -2 ? 'danger' : 'warning',
-        titre: `Palpation à faire — ${s.tatouageFemelle}`,
-        message: `La femelle ${s.tatouageFemelle} (saillie du ${fmt(s.dateSaillie)} avec ${s.tatouageMale}) doit être palpée ${retard}. Confirmez si elle est gestante ou vide.`,
+        titre: `Palpation — ${s.tatouageFemelle}`,
+        message: `${retard} · saillie du ${fmt(s.dateSaillie)} avec ♂ ${s.tatouageMale}`,
         lien: '/naissances',
-        lienLabel: 'Ouvrir Reproduction',
+        lienLabel: 'Naissances',
       });
     });
 
@@ -223,14 +223,14 @@ export default function TableauDeBord() {
     .filter(s => diffJours(s.dateMiseBas) <= 5)
     .forEach(s => {
       const j = diffJours(s.dateMiseBas);
-      const quand = j === 0 ? "aujourd'hui !" : j < 0 ? `en retard de ${Math.abs(j)}j` : `dans ${j} jour${j > 1 ? 's' : ''}`;
+      const quand = j === 0 ? "aujourd'hui" : j < 0 ? `en retard de ${Math.abs(j)}j` : `dans ${j}j`;
       alertes.push({
         id: `misebas-${s.id}`,
         niveau: j <= 0 ? 'danger' : 'warning',
-        titre: `Mise-bas imminente — ${s.tatouageFemelle}`,
-        message: `La femelle ${s.tatouageFemelle} doit mettre bas ${quand}. Préparez la cage maternité et vérifiez le nid.`,
+        titre: `Mise-bas — ${s.tatouageFemelle}`,
+        message: `${quand} · Préparez la cage maternité`,
         lien: '/naissances',
-        lienLabel: 'Ouvrir Reproduction',
+        lienLabel: 'Naissances',
       });
     });
 
@@ -240,14 +240,14 @@ export default function TableauDeBord() {
     .filter(s => (s.statut === 'Gestante' || s.statut === 'Mise-bas terminée') && diffJours(s.dateSevrage) <= 2)
     .forEach(s => {
       const j = diffJours(s.dateSevrage);
-      const quand = j === 0 ? "aujourd'hui" : j < 0 ? `il y a ${Math.abs(j)} jour${Math.abs(j) > 1 ? 's' : ''}` : `dans ${j} jour${j > 1 ? 's' : ''}`;
+      const quand = j === 0 ? "aujourd'hui" : j < 0 ? `en retard de ${Math.abs(j)}j` : `dans ${j}j`;
       alertes.push({
         id: `sevrage-${s.id}`,
         niveau: j < 0 ? 'danger' : 'info',
-        titre: `Sevrage à effectuer — ${s.tatouageFemelle}`,
-        message: `Les lapereaux de ${s.tatouageFemelle} (portée du ${fmt(s.dateMiseBas)}) doivent être sevrés ${quand}.`,
+        titre: `Sevrage — ${s.tatouageFemelle}`,
+        message: `${quand} · Portée du ${fmt(s.dateMiseBas)}`,
         lien: '/naissances',
-        lienLabel: 'Ouvrir Reproduction',
+        lienLabel: 'Naissances',
       });
     });
 
@@ -260,9 +260,9 @@ export default function TableauDeBord() {
         id: `stock-${s.id}`,
         niveau: s.quantiteKg === 0 ? 'danger' : 'warning',
         titre: `Stock critique — ${s.type}`,
-        message: `Il ne reste que ${s.quantiteKg} kg de ${s.type} (seuil d'alerte : ${s.seuilAlerte} kg, soit ${pct}% du seuil). Pensez à réapprovisionner.`,
+        message: `${s.quantiteKg} kg restants · seuil ${s.seuilAlerte} kg · Réapprovisionner`,
         lien: '/provende',
-        lienLabel: 'Gérer stocks',
+        lienLabel: 'Provende',
       });
     });
 
@@ -273,10 +273,10 @@ export default function TableauDeBord() {
       alertes.push({
         id: 'ratio-males',
         niveau: 'info',
-        titre: `Ratio reproducteurs déséquilibré`,
-        message: `Vous avez ${males.length} mâle${males.length > 1 ? 's' : ''} pour ${femelles.length} femelle${femelles.length > 1 ? 's' : ''} (ratio 1:${ratio.toFixed(1)}). L'optimal est 1 mâle pour 7 à 10 femelles.`,
+        titre: `Ratio mâles/femelles déséquilibré`,
+        message: `${males.length}♂ pour ${femelles.length}♀ (1:${ratio.toFixed(1)}) · Optimal : 1♂ pour 7–10♀`,
         lien: '/cheptel',
-        lienLabel: 'Voir cheptel',
+        lienLabel: 'Cheptel',
       });
     }
   }
@@ -291,10 +291,10 @@ export default function TableauDeBord() {
     alertes.push({
       id: 'chaleur',
       niveau: alerteChaleur >= 34 ? 'danger' : 'warning',
-      titre: `🌡️ Vague de chaleur — ${alerteChaleur}°C prévus`,
-      message: `Température critique pour les lapins (seuil : 32°C). ${conseil}`,
+      titre: `Chaleur — ${alerteChaleur}°C prévus`,
+      message: conseil,
       lien: '/',
-      lienLabel: 'Voir météo',
+      lienLabel: 'Météo',
     });
   }
 
@@ -303,10 +303,10 @@ export default function TableauDeBord() {
     alertes.push({
       id: 'cheptel-vide',
       niveau: 'info',
-      titre: 'Aucun animal dans le cheptel',
-      message: 'Commencez par enregistrer vos premiers reproducteurs pour activer le suivi automatique.',
+      titre: 'Cheptel vide',
+      message: 'Ajoutez vos premiers lapins pour activer le suivi automatique',
       lien: '/cheptel',
-      lienLabel: 'Ajouter lapins',
+      lienLabel: 'Cheptel',
     });
   }
 

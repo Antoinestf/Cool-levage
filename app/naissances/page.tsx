@@ -27,6 +27,7 @@ export default function ReproductionPage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [cheptel, setCheptel] = useState<Lapin[]>([]);
   const [saillies, setSaillies] = useState<Saillie[]>([]);
+  const [formOpen, setFormOpen] = useState(false);
   
   const [nouvelleSaillie, setNouvelleSaillie] = useState({
     idFemelle: '',
@@ -119,120 +120,138 @@ export default function ReproductionPage() {
 
   return (
     <div className="p-4 md:p-6 bg-gray-50 min-h-screen">
-      <div className="flex flex-wrap gap-3 items-center justify-between mb-5">
-        <h1 className="text-xl md:text-2xl font-bold text-gray-900">Maternité & Reproduction</h1>
-        <Link href="/cheptel" className="text-xs px-3 py-2 bg-zinc-800 text-white font-bold rounded-xl">
-          ← Cheptel
-        </Link>
+
+      {/* En-tête */}
+      <div className="flex items-center justify-between mb-5 gap-3">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900">🍼 Reproduction</h1>
+          <p className="text-xs text-gray-400 mt-0.5">{saillies.length} saillie{saillies.length > 1 ? 's' : ''} · {saillies.filter(s => s.statut === 'Gestante').length} gestante{saillies.filter(s => s.statut === 'Gestante').length > 1 ? 's' : ''}</p>
+        </div>
+        <button
+          onClick={() => setFormOpen(o => !o)}
+          className="bg-indigo-600 text-white font-bold text-sm px-4 py-2.5 rounded-xl shadow hover:bg-indigo-700 active:scale-95 transition-all shrink-0">
+          {formOpen ? '✕ Fermer' : '＋ Saillie'}
+        </button>
       </div>
 
-      {/* FORMULAIRE D'AJOUT */}
-      <form onSubmit={enregistrerSaillie} className="mb-5 p-4 md:p-6 rounded-2xl shadow-sm bg-white border border-gray-200">
-        <h2 className="text-base font-bold mb-4 text-gray-800">Enregistrer une saillie</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-          <div>
-            <label className="block text-sm font-bold text-black mb-1">Femelle (Mère)</label>
-            <select
-              value={nouvelleSaillie.idFemelle}
-              onChange={(e) => setNouvelleSaillie({...nouvelleSaillie, idFemelle: e.target.value})}
-              className="w-full border-2 border-gray-400 rounded-md p-2 text-black font-semibold bg-white"
-              required
-            >
-              <option value="">-- Sélectionner --</option>
-              {femelles.map(f => <option key={f.id} value={f.id}>{f.tatouage}</option>)}
-            </select>
+      {/* FORMULAIRE D'AJOUT — collapsible */}
+      {formOpen && (
+        <form onSubmit={(e) => { enregistrerSaillie(e); setFormOpen(false); }} className="mb-5 p-4 rounded-2xl shadow-sm bg-white border border-gray-200">
+          <h2 className="text-sm font-bold mb-4 text-gray-700">Nouvelle saillie</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">♀ Femelle (Mère)</label>
+              <select
+                value={nouvelleSaillie.idFemelle}
+                onChange={(e) => setNouvelleSaillie({...nouvelleSaillie, idFemelle: e.target.value})}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                required
+              >
+                <option value="">-- Sélectionner --</option>
+                {femelles.map(f => <option key={f.id} value={f.id}>{f.tatouage}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">♂ Mâle (Père)</label>
+              <select
+                value={nouvelleSaillie.idMale}
+                onChange={(e) => setNouvelleSaillie({...nouvelleSaillie, idMale: e.target.value})}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                required
+              >
+                <option value="">-- Sélectionner --</option>
+                {males.map(m => <option key={m.id} value={m.id}>{m.tatouage}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">📅 Date de l'accouplement</label>
+              <input
+                type="date"
+                value={nouvelleSaillie.dateSaillie}
+                onChange={(e) => setNouvelleSaillie({...nouvelleSaillie, dateSaillie: e.target.value})}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                required
+              />
+            </div>
           </div>
-
-          <div>
-            <label className="block text-sm font-bold text-black mb-1">Mâle (Père)</label>
-            <select
-              value={nouvelleSaillie.idMale}
-              onChange={(e) => setNouvelleSaillie({...nouvelleSaillie, idMale: e.target.value})}
-              className="w-full border-2 border-gray-400 rounded-md p-2 text-black font-semibold bg-white"
-              required
-            >
-              <option value="">-- Sélectionner --</option>
-              {males.map(m => <option key={m.id} value={m.id}>{m.tatouage}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-black mb-1">Date de l'accouplement</label>
-            <input
-              type="date"
-              value={nouvelleSaillie.dateSaillie}
-              onChange={(e) => setNouvelleSaillie({...nouvelleSaillie, dateSaillie: e.target.value})}
-              className="w-full border-2 border-gray-400 rounded-md p-2 text-black font-semibold bg-white"
-              required
-            />
-          </div>
-        </div>
-
-        <button type="submit" className="w-full sm:w-auto px-6 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 active:scale-95 transition-all text-sm">
-          Calculer les dates & Enregistrer
-        </button>
-      </form>
+          <button type="submit" className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 active:scale-95 transition-all text-sm">
+            ✅ Calculer les dates & Enregistrer
+          </button>
+        </form>
+      )}
 
       {/* LISTE DES REPRODUCTIONS */}
-      <h2 className="text-base font-bold text-gray-800 mb-4">Calendrier des portées</h2>
-      
+      <h2 className="text-sm font-bold text-gray-600 uppercase tracking-wide mb-3">Calendrier des portées</h2>
+
       {saillies.length === 0 ? (
-        <p className="text-gray-800 font-bold p-4 bg-white border-2 border-gray-300 rounded-xl">Aucune saillie enregistrée pour le moment.</p>
+        <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400">
+          <p className="text-3xl mb-2">🐰</p>
+          <p className="font-medium text-gray-600">Aucune saillie enregistrée</p>
+          <p className="text-xs mt-1">Remplissez le formulaire ci-dessus pour commencer</p>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {saillies.map((saillie) => (
-            <div key={saillie.id} className="border-2 border-gray-300 rounded-xl bg-white shadow-sm overflow-hidden">
-              
-              {/* En-tête de la carte avec couleur selon statut */}
-              <div className={`p-3 border-b-2 border-gray-300 ${
-                saillie.statut === 'En attente' ? 'bg-yellow-100' :
-                saillie.statut === 'Gestante' ? 'bg-green-100' :
-                saillie.statut === 'Vide' ? 'bg-red-100' : 'bg-blue-100'
-              }`}>
-                <div className="flex justify-between items-center">
-                  <h3 className="font-black text-black uppercase text-lg">
-                    ♀ {saillie.tatouageFemelle} <span className="text-gray-500 mx-1">x</span> ♂ {saillie.tatouageMale}
-                  </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {saillies.map((saillie) => {
+            const statutStyle = {
+              'En attente':       { bg: 'bg-amber-50',  text: 'text-amber-700',  border: 'border-amber-200',  badge: 'bg-amber-100 text-amber-800',  icone: '⏳' },
+              'Gestante':         { bg: 'bg-green-50',  text: 'text-green-700',  border: 'border-green-200',  badge: 'bg-green-100 text-green-800',  icone: '🤰' },
+              'Vide':             { bg: 'bg-red-50',    text: 'text-red-700',    border: 'border-red-200',    badge: 'bg-red-100 text-red-800',      icone: '❌' },
+              'Mise-bas terminée':{ bg: 'bg-blue-50',   text: 'text-blue-700',   border: 'border-blue-200',   badge: 'bg-blue-100 text-blue-800',    icone: '🍼' },
+            }[saillie.statut] ?? { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200', badge: 'bg-gray-100 text-gray-800', icone: '?' };
+
+            return (
+              <div key={saillie.id} className={`rounded-2xl bg-white border shadow-sm overflow-hidden ${statutStyle.border}`}>
+
+                {/* En-tête épuré */}
+                <div className={`px-4 py-3 ${statutStyle.bg}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="font-extrabold text-gray-900 text-base">
+                        ♀ {saillie.tatouageFemelle} <span className="text-gray-400 font-normal text-sm">×</span> ♂ {saillie.tatouageMale}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">Saillie : {formaterDate(saillie.dateSaillie)}</p>
+                    </div>
+                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 ${statutStyle.badge}`}>
+                      {statutStyle.icone} {saillie.statut}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Dates — format épuré sans séparateurs */}
+                <div className="px-4 py-3 space-y-2">
+                  {[
+                    { label: 'Palpation',   date: saillie.datePalpation, color: 'text-amber-600' },
+                    { label: 'Mise-bas',    date: saillie.dateMiseBas,   color: 'text-red-600'   },
+                    { label: 'Sevrage',     date: saillie.dateSevrage,   color: 'text-blue-600'  },
+                  ].map(({ label, date, color }) => (
+                    <div key={label} className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500 font-medium">{label}</span>
+                      <span className={`text-xs font-bold ${color}`}>{formaterDate(date)}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Sélecteur statut + suppression en bas */}
+                <div className="px-3 pb-3 space-y-2">
                   <select
                     value={saillie.statut}
                     onChange={(e) => mettreAJourStatut(saillie.id, e.target.value as Saillie['statut'])}
-                    className="border-2 border-gray-400 text-black font-bold p-1 rounded text-sm bg-white"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-xs font-bold text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
                   >
-                    <option value="En attente">En attente (Palpation)</option>
-                    <option value="Gestante">Gestante confirmée</option>
-                    <option value="Vide">Ratée (Vide)</option>
-                    <option value="Mise-bas terminée">Mise-bas terminée</option>
+                    <option value="En attente">⏳ En attente — Palpation</option>
+                    <option value="Gestante">🤰 Gestante confirmée</option>
+                    <option value="Vide">❌ Saillie ratée (Vide)</option>
+                    <option value="Mise-bas terminée">🍼 Mise-bas terminée</option>
                   </select>
-                </div>
-              </div>
-
-              {/* Corps de la carte : Les dates (Maintenant formatées via formaterDate) */}
-              <div className="p-4 space-y-3">
-                <div className="flex justify-between border-b pb-1">
-                  <span className="font-bold text-gray-700">Date Saillie :</span>
-                  <span className="font-black text-black">{formaterDate(saillie.dateSaillie)}</span>
-                </div>
-                <div className="flex justify-between border-b pb-1">
-                  <span className="font-bold text-gray-700">Palpation (+14j) :</span>
-                  <span className="font-black text-orange-600">{formaterDate(saillie.datePalpation)}</span>
-                </div>
-                <div className="flex justify-between border-b pb-1">
-                  <span className="font-bold text-gray-700">Mise-bas prévue :</span>
-                  <span className="font-black text-red-600">{formaterDate(saillie.dateMiseBas)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="font-bold text-gray-700">Sevrage (+35j) :</span>
-                  <span className="font-black text-blue-700">{formaterDate(saillie.dateSevrage)}</span>
-                </div>
-
-                <div className="mt-4 pt-3 border-t-2 border-gray-200 text-right">
-                  <button onClick={() => supprimerSaillie(saillie.id)} className="text-xs font-black text-red-600 uppercase hover:underline">
-                    Supprimer la fiche
+                  <button
+                    onClick={() => supprimerSaillie(saillie.id)}
+                    className="w-full py-1.5 text-[11px] font-semibold text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors">
+                    Supprimer cette fiche
                   </button>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

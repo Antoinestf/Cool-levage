@@ -22,6 +22,7 @@ interface Stock {
   type: string;
   quantiteKg: number;
   seuilAlerte: number;
+  prixAchat?: number;
 }
 
 // ─── Base de prix par région (FCFA/kg ou équivalent) ─────────────────────────
@@ -36,8 +37,6 @@ interface PrixIngredient {
 }
 
 const PRIX_PAR_ZONE: Record<ZonePrix, Record<string, PrixIngredient>> = {
-  // ── Afrique de l'Ouest — FCFA/kg ─────────────────────────────────────────
-  // Sources : SIMAGRI CI, Le Rural Bénin, Agence Ecofin, EspaceAgro (2025/2026)
   afrique_ouest: {
     "Maïs":                { min: 170, max: 260, devise: "FCFA/kg", note: "Moy. nationale Bénin 217 FCFA/kg (juin 2025) ; CI : 120–270 (pic soudure 500) ; Sénégal importé ~305 FCFA/kg" },
     "Soja":                { min: 260, max: 320, devise: "FCFA/kg", note: "Prix officiel Bénin 275 FCFA/kg 2024/25 ; CI EXW 260 FCFA/kg ; Burkina 275 FCFA/kg" },
@@ -51,9 +50,6 @@ const PRIX_PAR_ZONE: Record<ZonePrix, Record<string, PrixIngredient>> = {
     "Phosphate bicalcique":{ min: 560, max: 820,  devise: "FCFA/kg", note: "Importé principalement du Maroc (OCP) ; aussi Chine" },
     "Autre":               { min: 200, max: 420,  devise: "FCFA/kg" },
   },
-  // ── Afrique du Nord — MAD/kg (Maroc référence) ────────────────────────────
-  // Sources : EspaceAgro Maroc, OCP, Avifeed.ma, parités import (2025/2026)
-  // NB Égypte : 1 EGP ≈ 0,35 MAD — prix Égypte très inférieurs (subventions)
   afrique_nord: {
     "Maïs":                { min: 2.5, max: 3.2, devise: "MAD/kg", note: "Maroc : partiellement importé ; Égypte subventionné ~8–11 EGP/kg (≈0,11–0,15 USD)" },
     "Soja":                { min: 3.5, max: 5.0, devise: "MAD/kg", note: "Surtout importé Argentine/Brésil" },
@@ -67,8 +63,6 @@ const PRIX_PAR_ZONE: Record<ZonePrix, Record<string, PrixIngredient>> = {
     "Phosphate bicalcique":{ min: 6.0, max: 10.0,devise: "MAD/kg", note: "OCP = leader mondial → prix local très compétitif au Maroc" },
     "Autre":               { min: 3.0, max: 6.0, devise: "MAD/kg" },
   },
-  // ── Afrique de l'Est — KES/kg (Kenya référence) ───────────────────────────
-  // Sources : FAO GIEWS, tendances marchés Kenya/Tanzanie/Éthiopie (2025)
   afrique_est: {
     "Maïs":                { min: 45,  max: 80,  devise: "KES/kg", note: "Kenya : 50–70 KES/kg (2024) ; Éthiopie plus bas ; Tanzanie similaire" },
     "Soja":                { min: 100, max: 180, devise: "KES/kg", note: "Produit localement au Kenya/Tanzanie" },
@@ -82,8 +76,6 @@ const PRIX_PAR_ZONE: Record<ZonePrix, Record<string, PrixIngredient>> = {
     "Phosphate bicalcique":{ min: 300, max: 550, devise: "KES/kg", note: "Import Maroc/Chine via Mombasa" },
     "Autre":               { min: 80,  max: 200, devise: "KES/kg" },
   },
-  // ── Afrique Centrale — FCFA/kg ────────────────────────────────────────────
-  // Sources : EspaceAgro Cameroun, FSCluster bulletin marchés, Investir au Cameroun (2025)
   afrique_centrale: {
     "Maïs":                { min: 200, max: 240, devise: "FCFA/kg", note: "Cameroun : sac 100 kg = 20 000–23 000 FCFA ; pression haussière due à demande nigériane" },
     "Soja":                { min: 280, max: 390, devise: "FCFA/kg", note: "Production Cameroun/RDC ; qualité variable selon séchage" },
@@ -131,10 +123,7 @@ const PAYS_PAR_ZONE: Record<string, ZonePrix> = {
   "Tchad": "afrique_centrale",
 };
 
-// ─── Constantes ───────────────────────────────────────────────────────────────
-
 const INGREDIENTS_PREDEFINIS = Object.keys(PRIX_PAR_ZONE.afrique_ouest);
-
 const PAYS_LISTE = Object.keys(PAYS_PAR_ZONE).sort();
 
 // ─── Composant Modal ──────────────────────────────────────────────────────────
@@ -178,6 +167,7 @@ export default function ProvendePage() {
   const [stockType, setStockType] = useState(INGREDIENTS_PREDEFINIS[0]);
   const [stockQty, setStockQty] = useState("");
   const [stockSeuil, setStockSeuil] = useState("");
+  const [stockPrix, setStockPrix] = useState("");
 
   // Onglet Prix
   const [prixRecetteId, setPrixRecetteId] = useState("");
@@ -236,27 +226,45 @@ export default function ProvendePage() {
   // ─── Stocks ──────────────────────────────────────────────────────────────────
 
   const ouvrirModalStock = () => {
-    setStockType(INGREDIENTS_PREDEFINIS[0]); setStockQty(""); setStockSeuil("");
+    setStockType(INGREDIENTS_PREDEFINIS[0]); 
+    setStockQty(""); 
+    setStockSeuil("");
+    setStockPrix("");
     setModalStockOpen(true);
-  };
-
-  const enregistrerStock = () => {
-    const qty = parseFloat(stockQty);
-    if (!qty || qty <= 0) return;
-    const seuil = parseFloat(stockSeuil) || 0;
-    const idx = stocks.findIndex((s) => s.type === stockType);
-    if (idx >= 0) {
-      const maj = [...stocks]; maj[idx].quantiteKg += qty; saveStocks(maj);
-    } else {
-      saveStocks([...stocks, { id: Date.now().toString(), type: stockType, quantiteKg: qty, seuilAlerte: seuil }]);
-    }
-    setModalStockOpen(false);
   };
 
   const niveauStock = (s: Stock) => {
     if (!s.seuilAlerte) return "ok";
     const pct = s.quantiteKg / (s.seuilAlerte * 3);
     return pct < 0.33 ? "danger" : pct < 0.66 ? "warning" : "ok";
+  };
+
+  const enregistrerStock = () => {
+    const qty = parseFloat(stockQty);
+    if (!qty || qty <= 0) return;
+    
+    const seuil = parseFloat(stockSeuil) || 0;
+    const prix = parseFloat(stockPrix) || 0; 
+    
+    const idx = stocks.findIndex((s) => s.type === stockType);
+    
+    if (idx >= 0) {
+      const maj = [...stocks]; 
+      maj[idx].quantiteKg += qty; 
+      maj[idx].prixAchat = (maj[idx].prixAchat || 0) + prix; 
+      saveStocks(maj);
+    } else {
+      saveStocks([...stocks, { 
+        id: Date.now().toString(), 
+        type: stockType, 
+        quantiteKg: qty, 
+        seuilAlerte: seuil,
+        prixAchat: prix 
+      }]);
+    }
+    
+    setModalStockOpen(false);
+    setStockPrix("");
   };
 
   // ─── Calcul prix ─────────────────────────────────────────────────────────────
@@ -329,22 +337,44 @@ export default function ProvendePage() {
                 const niveau = niveauStock(s);
                 const pct = s.seuilAlerte ? Math.min(100, Math.round((s.quantiteKg / (s.seuilAlerte * 3)) * 100)) : 100;
                 const barColor = niveau === "danger" ? "bg-red-500" : niveau === "warning" ? "bg-amber-400" : "bg-emerald-500";
+                
                 return (
                   <div key={s.id} className="bg-gray-50 rounded-xl p-4 border border-gray-100 relative">
                     <button onClick={() => saveStocks(stocks.filter(x => x.id !== s.id))}
-                      className="absolute top-2 right-2 text-gray-300 hover:text-red-500 text-xs">✕</button>
+  className="absolute top-2 right-2 text-red-500 hover:text-red-700 font-bold text-sm p-1">✕</button>
+                    
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{s.type}</p>
+                    
                     <p className="text-2xl font-bold text-emerald-700 mt-1">
                       {s.quantiteKg.toFixed(1)}<span className="text-sm font-normal text-gray-400 ml-1">kg</span>
                     </p>
+                    
                     {s.seuilAlerte > 0 && (
                       <p className={`text-xs mt-1 ${niveau === "danger" ? "text-red-500 font-semibold" : "text-gray-400"}`}>
                         Alerte : {s.seuilAlerte} kg
                       </p>
                     )}
+                    
                     <div className="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                       <div className={`h-full ${barColor}`} style={{ width: `${pct}%` }} />
                     </div>
+
+                    {s.prixAchat && s.prixAchat > 0 ? (
+                      <div className="mt-4 pt-3 border-t border-gray-200 flex justify-between items-center">
+                        <div>
+                          <span className="text-[10px] text-gray-400 uppercase tracking-wider block">Coût total</span>
+                          <p className="font-bold text-sm text-gray-700">{s.prixAchat} FCFA</p>
+                        </div>
+                        
+                        <div className="text-right">
+                          <span className="text-[10px] text-gray-400 uppercase tracking-wider block">Revient à</span>
+                          <p className="font-semibold text-sm text-gray-600">
+                            {(s.prixAchat / s.quantiteKg).toFixed(2)} FCFA/kg
+                          </p>
+                        </div>
+                      </div>
+                    ) : null}
+
                   </div>
                 );
               })}
@@ -436,7 +466,6 @@ export default function ProvendePage() {
               </p>
             )}
 
-            {/* Résultat */}
             {resultatPrix && recetteSelectionnee && (
               <div className="mt-2">
                 <div className="flex items-center justify-between mb-3">
@@ -636,6 +665,14 @@ export default function ProvendePage() {
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
             </div>
           </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Prix d'achat total</label>
+            <input type="number" min="0" value={stockPrix} onChange={(e) => setStockPrix(e.target.value)}
+              placeholder="Ex: 15000"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+          </div>
+
           <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
             <button onClick={() => setModalStockOpen(false)}
               className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
