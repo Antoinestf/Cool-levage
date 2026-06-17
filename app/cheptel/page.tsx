@@ -270,26 +270,31 @@ export default function CheptelPage() {
                 </div>
 
                 {/* Boutons action */}
-                <div className="px-3 pb-3 grid grid-cols-4 gap-2">
+                <div className="px-3 pb-3 grid grid-cols-5 gap-1.5">
                   <Link href={`/genealogie?tatouage=${lapin.tatouage}`}
                     className="flex flex-col items-center justify-center gap-1 py-2.5 bg-emerald-600 text-white rounded-xl active:scale-95 transition-all text-center">
                     <span className="text-base leading-none">🌳</span>
-                    <span className="text-[10px] font-bold leading-none">Généal.</span>
+                    <span className="text-[9px] font-bold leading-none">Généal.</span>
+                  </Link>
+                  <Link href={`/performances?lapin=${lapin.id}`}
+                    className="flex flex-col items-center justify-center gap-1 py-2.5 bg-orange-500 text-white rounded-xl active:scale-95 transition-all text-center">
+                    <span className="text-base leading-none">⚖️</span>
+                    <span className="text-[9px] font-bold leading-none">Peser</span>
                   </Link>
                   <button onClick={() => setShowCareForm(p => ({ ...p, [lapin.id]: !p[lapin.id] }))}
                     className="flex flex-col items-center justify-center gap-1 py-2.5 bg-indigo-600 text-white rounded-xl active:scale-95 transition-all">
                     <span className="text-base leading-none">{showCareForm[lapin.id] ? '✕' : '+'}</span>
-                    <span className="text-[10px] font-bold leading-none">Soin</span>
+                    <span className="text-[9px] font-bold leading-none">Soin</span>
                   </button>
                   <button onClick={() => setShowCareList(p => ({ ...p, [lapin.id]: !p[lapin.id] }))}
                     className="flex flex-col items-center justify-center gap-1 py-2.5 bg-purple-600 text-white rounded-xl active:scale-95 transition-all">
                     <span className="text-base leading-none">📋</span>
-                    <span className="text-[10px] font-bold leading-none">Historique</span>
+                    <span className="text-[9px] font-bold leading-none">Histo.</span>
                   </button>
                   <button onClick={() => supprimerLapin(lapin.id)}
                     className="flex flex-col items-center justify-center gap-1 py-2.5 bg-red-500 text-white rounded-xl active:scale-95 transition-all">
                     <span className="text-base leading-none">🗑️</span>
-                    <span className="text-[10px] font-bold leading-none">Supprimer</span>
+                    <span className="text-[9px] font-bold leading-none">Suppr.</span>
                   </button>
                 </div>
 

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import PwaProvider from "@/components/PwaProvider";
+import NotifManager from "@/components/NotifManager";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -19,12 +20,13 @@ export const viewport: Viewport = {
 };
 
 const NAV_LINKS = [
-  { href: "/",       icon: "📊", label: "Bord"       },
-  { href: "/cheptel",    icon: "🐇", label: "Cheptel"    },
-  { href: "/naissances", icon: "🍼", label: "Repro"      },
-  { href: "/provende",   icon: "🌾", label: "Provende"   },
-  { href: "/genealogie", icon: "🌳", label: "Généalogie" },
-  { href: "/associes",   icon: "🤝", label: "Associés"   },
+  { href: "/",             icon: "📊", label: "Bord"        },
+  { href: "/cheptel",      icon: "🐇", label: "Cheptel"     },
+  { href: "/naissances",   icon: "🍼", label: "Repro"       },
+  { href: "/provende",     icon: "🌾", label: "Provende"    },
+  { href: "/performances", icon: "📈", label: "Perfs"       },
+  { href: "/genealogie",   icon: "🌳", label: "Généalogie"  },
+  { href: "/associes",     icon: "🤝", label: "Associés"    },
 ];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -32,6 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr">
       <body style={{ fontFamily: "'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" }}>
         <PwaProvider />
+        <NotifManager />
 
         {/* ── Wrapper global ──────────────────────────────────────────────── */}
         <div className="flex h-screen bg-gray-100">

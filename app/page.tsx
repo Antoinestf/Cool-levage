@@ -97,6 +97,69 @@ const CarteAlerte = ({ alerte }: { alerte: Alerte }) => {
   );
 };
 
+// ─── Widget rappels (état notifications) ─────────────────────────────────────
+function NotifWidget() {
+  const [monted, setMonted] = React.useState(false);
+  const [perm, setPerm] = React.useState<string>('unknown');
+  const [refus, setRefus] = React.useState(false);
+
+  React.useEffect(() => { setMonted(true); }, []);
+
+  React.useEffect(() => {
+    if (!monted || typeof window === 'undefined' || !('Notification' in window)) return;
+    setPerm(Notification.permission);
+    setRefus(!!localStorage.getItem('ferme_notif_refus'));
+  }, [monted]);
+
+  const activer = async () => {
+    if (!('Notification' in window)) return;
+    localStorage.removeItem('ferme_notif_refus');
+    const r = await Notification.requestPermission();
+    setPerm(r);
+    setRefus(false);
+  };
+
+  const desactiver = () => {
+    localStorage.setItem('ferme_notif_refus', '1');
+    setRefus(true);
+  };
+
+  if (!monted || typeof window === 'undefined' || !('Notification' in window)) return null;
+
+  const actifs = perm === 'granted' && !refus;
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-bold text-gray-700">Rappels automatiques</h3>
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${actifs ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+          {actifs ? '🔔 Actifs' : '🔕 Inactifs'}
+        </span>
+      </div>
+      <p className="text-[11px] text-gray-400 mb-3 leading-relaxed">
+        {actifs
+          ? 'Vous recevrez des rappels pour les palpations, mises-bas, sevrages et stocks critiques.'
+          : 'Activez les rappels pour ne jamais manquer une palpation ou une mise-bas.'}
+      </p>
+      {perm === 'denied' ? (
+        <p className="text-[11px] text-amber-600 font-semibold">
+          ⚠️ Bloqué par le navigateur. Allez dans les paramètres de votre navigateur pour autoriser les notifications pour ce site.
+        </p>
+      ) : actifs ? (
+        <button onClick={desactiver}
+          className="w-full py-2 text-xs font-bold text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50">
+          Désactiver les rappels
+        </button>
+      ) : (
+        <button onClick={activer}
+          className="w-full py-2 text-xs font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 active:scale-95 transition-all">
+          🔔 Activer les rappels
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ─── Page principale ─────────────────────────────────────────────────────────
 
 export default function TableauDeBord() {
@@ -390,6 +453,9 @@ export default function TableauDeBord() {
               Gérer la provende →
             </Link>
           </div>
+
+          {/* Rappels push */}
+          <NotifWidget />
 
           {/* Répartition sexes */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">

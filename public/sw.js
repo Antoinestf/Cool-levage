@@ -8,7 +8,7 @@
    → elles ne transitent jamais par le réseau, donc 100 % offline nativement.
    ───────────────────────────────────────────────────────────────────────── */
 
-const CACHE = 'elevage-v1';
+const CACHE = 'elevage-v2';
 
 // Pages à pré-cacher dès l'installation
 const SHELL = [
@@ -16,6 +16,7 @@ const SHELL = [
   '/cheptel',
   '/naissances',
   '/provende',
+  '/performances',
   '/genealogie',
   '/associes',
   '/manifest.json',
@@ -37,6 +38,24 @@ self.addEventListener('activate', (e) => {
     )
   );
   self.clients.claim(); // Prend le contrôle de tous les onglets ouverts
+});
+
+// ── Clic sur une notification : ouvre l'app sur la bonne page ─────────────────
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const lien = (e.notification.data && e.notification.data.lien) || '/';
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      // Si l'app est déjà ouverte, on focus et on navigue
+      const appOuverte = clients.find(c => c.url.includes(self.location.origin));
+      if (appOuverte) {
+        appOuverte.focus();
+        return appOuverte.navigate(lien);
+      }
+      // Sinon on ouvre une nouvelle fenêtre
+      return self.clients.openWindow(lien);
+    })
+  );
 });
 
 // ── Fetch : intercepte toutes les requêtes GET ─────────────────────────────
