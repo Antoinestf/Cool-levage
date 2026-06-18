@@ -97,6 +97,13 @@ function genererAlertes(): Alerte[] {
           corps: `♀ ${s.tatouageFemelle} — Préparez la caisse à nid`,
           lien: "/naissances",
         });
+      } else if (diff === 5) {
+        alertes.push({
+          id: `misebas-j5-${s.id}-${td}`,
+          titre: "🪺 Mise-bas dans 5 jours",
+          corps: `♀ ${s.tatouageFemelle} — Installez la boîte à nid dès maintenant`,
+          lien: "/naissances",
+        });
       }
     }
 

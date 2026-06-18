@@ -62,12 +62,6 @@ export default function CheptelPage() {
     if (isLoaded) localStorage.setItem('ferme_cheptel', JSON.stringify(cheptel));
   }, [cheptel, isLoaded]);
 
-  useEffect(() => {
-    const fermer = () => setMenuOuvertId(null);
-    document.addEventListener('click', fermer);
-    return () => document.removeEventListener('click', fermer);
-  }, []);
-
   // ── Dictée vocale ──────────────────────────────────────────────────────────
   const formaterDateVocale = (texte: string) => {
     const moisMap: Record<string, string> = {
@@ -217,32 +211,39 @@ export default function CheptelPage() {
         );
       })()}
 
-      {/* ── Menu déroulant (dropdown) — positionné en fixed pour échapper au overflow-hidden ── */}
+      {/* ── Menu déroulant ────────────────────────────────────────────────── */}
       {menuOuvertId && menuPos && (
-        <div
-          className="fixed z-[60] bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden w-44"
-          style={{ top: menuPos.top, right: menuPos.right }}
-          onClick={e => e.stopPropagation()}>
-          <Link
-            href={`/genealogie?tatouage=${cheptel.find(l => l.id === menuOuvertId)?.tatouage ?? ''}`}
-            className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100"
-            onClick={() => setMenuOuvertId(null)}>
-            <span>🌳</span> Généalogie
-          </Link>
-          <button
-            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100 text-left"
-            onClick={() => {
-              setShowCareList(p => ({ ...p, [menuOuvertId]: !p[menuOuvertId] }));
-              setMenuOuvertId(null);
-            }}>
-            <span>📋</span> Historique
-          </button>
-          <button
-            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 text-left font-bold"
-            onClick={() => supprimerLapin(menuOuvertId)}>
-            <span>🗑️</span> Supprimer
-          </button>
-        </div>
+        <>
+          {/* Overlay transparent — ferme le menu au clic extérieur, sans listener document */}
+          <div
+            className="fixed inset-0 z-[59]"
+            onClick={() => setMenuOuvertId(null)}
+          />
+          {/* Menu en fixed pour échapper au overflow-hidden des cartes */}
+          <div
+            className="fixed z-[60] bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden w-44"
+            style={{ top: menuPos.top, right: menuPos.right }}>
+            <Link
+              href={`/genealogie?tatouage=${cheptel.find(l => l.id === menuOuvertId)?.tatouage ?? ''}`}
+              className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100"
+              onClick={() => setMenuOuvertId(null)}>
+              <span>🌳</span> Généalogie
+            </Link>
+            <button
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100 text-left"
+              onClick={() => {
+                setShowCareList(p => ({ ...p, [menuOuvertId]: !p[menuOuvertId] }));
+                setMenuOuvertId(null);
+              }}>
+              <span>📋</span> Historique
+            </button>
+            <button
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 text-left font-bold"
+              onClick={() => supprimerLapin(menuOuvertId)}>
+              <span>🗑️</span> Supprimer
+            </button>
+          </div>
+        </>
       )}
 
       {/* ── Modale de confirmation de suppression ────────────────────────── */}
