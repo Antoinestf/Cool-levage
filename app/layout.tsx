@@ -29,6 +29,9 @@ const NAV_LINKS = [
   { href: "/export",       icon: "📤", label: "Export"    },
 ];
 
+// Barre de navigation mobile — 5 entrées maximum pour rester lisible
+const BOTTOM_NAV_LINKS = NAV_LINKS.slice(0, 5);
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr">
@@ -80,7 +83,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* ── Bottom Navigation — visible uniquement < md ───────────────── */}
         <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-zinc-900 border-t border-zinc-700 safe-area-pb">
           <div className="flex items-stretch h-16">
-            {NAV_LINKS.map(({ href, icon, label }) => (
+            {BOTTOM_NAV_LINKS.map(({ href, icon, label }) => (
               <Link
                 key={href}
                 href={href}

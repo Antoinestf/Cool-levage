@@ -256,6 +256,60 @@ function NotifWidget() {
   );
 }
 
+// ─── BackupWidget ─────────────────────────────────────────────────────────────
+
+function BackupWidget() {
+  const KEYS = ['ferme_cheptel','ferme_reproduction','ferme_naissances','ferme_stocks_v2','ferme_pesees','ferme_notifs_vues','ferme_config'];
+
+  const sauvegarder = () => {
+    const data: Record<string, unknown> = {};
+    KEYS.forEach(k => { const v = localStorage.getItem(k); if (v !== null) data[k] = JSON.parse(v); });
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `coolelevage_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const restaurer = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target?.result as string);
+        if (!Object.keys(data).some(k => k.startsWith('ferme_'))) {
+          alert("Fichier invalide : aucune donnée Coolélevage trouvée.");
+          return;
+        }
+        Object.entries(data).forEach(([k, v]) => localStorage.setItem(k, JSON.stringify(v)));
+        window.location.reload();
+      } catch { alert("Erreur lors de la lecture du fichier."); }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+      <h3 className="text-sm font-bold text-gray-700 mb-1">Sécurité & Sauvegarde</h3>
+      <p className="text-[11px] text-gray-400 mb-4">Exportez ou restaurez toutes vos données.</p>
+      <div className="space-y-2">
+        <button onClick={sauvegarder}
+          className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:opacity-75 text-white font-bold text-sm rounded-xl transition-colors">
+          💾 Sauvegarder mon élevage
+        </button>
+        <label className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-gray-200 hover:border-gray-400 text-gray-600 font-bold text-sm rounded-xl cursor-pointer transition-colors">
+          📂 Restaurer une sauvegarde
+          <input type="file" accept=".json" className="hidden" onChange={restaurer} />
+        </label>
+      </div>
+    </div>
+  );
+}
+
 // ─── Page principale ─────────────────────────────────────────────────────────
 
 export default function TableauDeBord() {
@@ -567,6 +621,9 @@ export default function TableauDeBord() {
           {/* Rappels push */}
           <NotifWidget />
 
+          {/* Sécurité & Sauvegarde */}
+          <BackupWidget />
+
           {/* Répartition sexes */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <h3 className="text-sm font-bold text-gray-700 mb-3">Répartition du cheptel</h3>
@@ -592,6 +649,18 @@ export default function TableauDeBord() {
           </div>
 
         </div>
+      </div>
+
+      {/* ── Accès Export & Rapports ───────────────────────────────────────── */}
+      <div className="mt-6">
+        <Link href="/export"
+          className="flex items-center justify-between gap-4 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-2xl p-5 shadow-sm hover:opacity-90 active:opacity-80 transition-opacity">
+          <div>
+            <p className="font-bold text-base">Export & Rapports</p>
+            <p className="text-indigo-200 text-xs mt-0.5">Imprimez un rapport ou exportez en CSV</p>
+          </div>
+          <span className="text-3xl shrink-0">📤</span>
+        </Link>
       </div>
     </div>
   );

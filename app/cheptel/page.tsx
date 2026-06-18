@@ -47,7 +47,10 @@ export default function CheptelPage() {
   const [showCareList, setShowCareList] = useState<Record<string, boolean>>({});
   const [newCare, setNewCare]       = useState({ date: '', type: '', note: '' });
   const [formOpen, setFormOpen]     = useState(false);
-  const [qrLapinId, setQrLapinId]  = useState<string | null>(null);
+  const [qrLapinId, setQrLapinId]       = useState<string | null>(null);
+  const [menuOuvertId, setMenuOuvertId] = useState<string | null>(null);
+  const [menuPos, setMenuPos]           = useState<{ top: number; right: number } | null>(null);
+  const [lapinASupprimer, setLapinASupprimer] = useState<string | null>(null);
 
   useEffect(() => {
     const data = localStorage.getItem('ferme_cheptel');
@@ -58,6 +61,12 @@ export default function CheptelPage() {
   useEffect(() => {
     if (isLoaded) localStorage.setItem('ferme_cheptel', JSON.stringify(cheptel));
   }, [cheptel, isLoaded]);
+
+  useEffect(() => {
+    const fermer = () => setMenuOuvertId(null);
+    document.addEventListener('click', fermer);
+    return () => document.removeEventListener('click', fermer);
+  }, []);
 
   // ── Dictée vocale ──────────────────────────────────────────────────────────
   const formaterDateVocale = (texte: string) => {
@@ -122,7 +131,21 @@ export default function CheptelPage() {
   };
 
   const supprimerLapin = (id: string) => {
-    if (confirm("Supprimer ce lapin ?")) setCheptel(prev => prev.filter(l => l.id !== id));
+    setLapinASupprimer(id);
+    setMenuOuvertId(null);
+  };
+
+  const confirmerSuppression = () => {
+    if (lapinASupprimer) setCheptel(prev => prev.filter(l => l.id !== lapinASupprimer));
+    setLapinASupprimer(null);
+  };
+
+  const ouvriMenu = (e: React.MouseEvent<HTMLButtonElement>, id: string) => {
+    e.stopPropagation();
+    if (menuOuvertId === id) { setMenuOuvertId(null); return; }
+    const rect = e.currentTarget.getBoundingClientRect();
+    setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    setMenuOuvertId(id);
   };
 
   const ajouterSoin = (lapinId: string) => {
@@ -193,6 +216,57 @@ export default function CheptelPage() {
           </div>
         );
       })()}
+
+      {/* ── Menu déroulant (dropdown) — positionné en fixed pour échapper au overflow-hidden ── */}
+      {menuOuvertId && menuPos && (
+        <div
+          className="fixed z-[60] bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden w-44"
+          style={{ top: menuPos.top, right: menuPos.right }}
+          onClick={e => e.stopPropagation()}>
+          <Link
+            href={`/genealogie?tatouage=${cheptel.find(l => l.id === menuOuvertId)?.tatouage ?? ''}`}
+            className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100"
+            onClick={() => setMenuOuvertId(null)}>
+            <span>🌳</span> Généalogie
+          </Link>
+          <button
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100 text-left"
+            onClick={() => {
+              setShowCareList(p => ({ ...p, [menuOuvertId]: !p[menuOuvertId] }));
+              setMenuOuvertId(null);
+            }}>
+            <span>📋</span> Historique
+          </button>
+          <button
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 text-left font-bold"
+            onClick={() => supprimerLapin(menuOuvertId)}>
+            <span>🗑️</span> Supprimer
+          </button>
+        </div>
+      )}
+
+      {/* ── Modale de confirmation de suppression ────────────────────────── */}
+      {lapinASupprimer && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+            <p className="text-4xl mb-3">⚠️</p>
+            <h3 className="font-bold text-gray-900 text-lg mb-2">Supprimer ce lapin ?</h3>
+            <p className="text-sm text-gray-500 mb-6">
+              Cette action est irréversible. Toutes les données de ce lapin seront perdues.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setLapinASupprimer(null)}
+                className="flex-1 py-2.5 border-2 border-gray-300 rounded-xl font-bold text-sm text-gray-700 hover:border-gray-400 transition-colors">
+                Annuler
+              </button>
+              <button onClick={confirmerSuppression}
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 rounded-xl font-bold text-sm text-white transition-colors">
+                Oui, supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── En-tête ─────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-5 gap-3">
@@ -343,17 +417,7 @@ export default function CheptelPage() {
                 </div>
 
                 {/* Boutons action */}
-                <div className="px-3 pb-3 grid grid-cols-6 gap-1">
-                  <Link href={`/genealogie?tatouage=${lapin.tatouage}`}
-                    className="flex flex-col items-center justify-center gap-1 py-2.5 bg-emerald-600 text-white rounded-xl active:opacity-75 transition-colors text-center">
-                    <span className="text-base leading-none">🌳</span>
-                    <span className="text-[9px] font-bold leading-none">Généal.</span>
-                  </Link>
-                  <button onClick={() => setQrLapinId(lapin.id)}
-                    className="flex flex-col items-center justify-center gap-1 py-2.5 bg-zinc-700 text-white rounded-xl active:opacity-75 transition-colors">
-                    <span className="text-base leading-none">📱</span>
-                    <span className="text-[9px] font-bold leading-none">QR</span>
-                  </button>
+                <div className="px-3 pb-3 grid grid-cols-4 gap-1.5">
                   <Link href={`/performances?lapin=${lapin.id}`}
                     className="flex flex-col items-center justify-center gap-1 py-2.5 bg-orange-500 text-white rounded-xl active:opacity-75 transition-colors text-center">
                     <span className="text-base leading-none">⚖️</span>
@@ -364,15 +428,15 @@ export default function CheptelPage() {
                     <span className="text-base leading-none">{showCareForm[lapin.id] ? '✕' : '+'}</span>
                     <span className="text-[9px] font-bold leading-none">Soin</span>
                   </button>
-                  <button onClick={() => setShowCareList(p => ({ ...p, [lapin.id]: !p[lapin.id] }))}
-                    className="flex flex-col items-center justify-center gap-1 py-2.5 bg-purple-600 text-white rounded-xl active:opacity-75 transition-colors">
-                    <span className="text-base leading-none">📋</span>
-                    <span className="text-[9px] font-bold leading-none">Histo.</span>
+                  <button onClick={() => setQrLapinId(lapin.id)}
+                    className="flex flex-col items-center justify-center gap-1 py-2.5 bg-zinc-700 text-white rounded-xl active:opacity-75 transition-colors">
+                    <span className="text-base leading-none">📱</span>
+                    <span className="text-[9px] font-bold leading-none">QR</span>
                   </button>
-                  <button onClick={() => supprimerLapin(lapin.id)}
-                    className="flex flex-col items-center justify-center gap-1 py-2.5 bg-red-500 text-white rounded-xl active:opacity-75 transition-colors">
-                    <span className="text-base leading-none">🗑️</span>
-                    <span className="text-[9px] font-bold leading-none">Suppr.</span>
+                  <button onClick={(e) => ouvriMenu(e, lapin.id)}
+                    className="flex flex-col items-center justify-center gap-1 py-2.5 bg-gray-100 text-gray-500 rounded-xl active:opacity-75 transition-colors">
+                    <span className="text-base leading-none font-extrabold">•••</span>
+                    <span className="text-[9px] font-bold leading-none">Plus</span>
                   </button>
                 </div>
 

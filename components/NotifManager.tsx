@@ -17,7 +17,7 @@ const PERMISSION_KEY     = "ferme_notif_refus";   // "1" si l'éleveur a dit non
 const NOTIF_ICON         = "/icons/icon-192.svg";
 
 // ── Types minimaux pour lire localStorage ─────────────────────────────────────
-interface Lapin  { id: string; tatouage: string; statut?: string; }
+interface Lapin  { id: string; tatouage: string; statut?: string; dateNaissance?: string; }
 interface Saillie {
   id: string; tatouageFemelle: string; tatouageMale: string;
   datePalpation: string; dateMiseBas: string; dateSevrage: string;
@@ -129,6 +129,22 @@ function genererAlertes(): Alerte[] {
           titre: "⚠️ Stock critique",
           corps: `${stock.ingredient} : il ne reste que ${stock.quantite} kg — Réapprovisionner`,
           lien: "/provende",
+        });
+      }
+    }
+
+    // Vaccin 1 mois — J-2 (2 jours avant que le lapereau ait 1 mois)
+    for (const lapin of cheptel) {
+      if (!lapin.dateNaissance) continue;
+      const dateVaccin = new Date(lapin.dateNaissance);
+      dateVaccin.setDate(dateVaccin.getDate() + 30);
+      const dateVaccinStr = dateVaccin.toISOString().split("T")[0];
+      if (diffJours(dateVaccinStr) === 2) {
+        alertes.push({
+          id: `vaccin-1mois-${lapin.id}-${td}`,
+          titre: "💉 Vaccin dans 2 jours",
+          corps: `🐇 ${lapin.tatouage} — Aura 1 mois le ${fmt(dateVaccinStr)} · Préparez le vaccin`,
+          lien: "/cheptel",
         });
       }
     }
