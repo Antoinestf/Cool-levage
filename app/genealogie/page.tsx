@@ -9,7 +9,12 @@ interface Lapin {
   statut: string;
   pere?: string;
   mere?: string;
+  couleur?: string;
+  dateNaissance?: string;
+  poids?: number;
 }
+
+const fmtDate = (d: string) => { const [y, m, j] = d.split('-'); return `${j}/${m}/${y}`; };
 
 export default function ArbreGenealogique() {
   const [cheptel, setCheptel]     = useState<Lapin[]>([]);
@@ -101,17 +106,19 @@ export default function ArbreGenealogique() {
     lapin: Lapin | null; role: string; sexeRequis: 'M' | 'F';
     enfantId?: number; estCible?: boolean; onRetirer?: () => void;
   }) => {
+
+    // ── Slot vide : niveau inférieur non défini ──────────────────────────────
     if (!lapin) {
       if (!enfantId) {
         return (
-          <div className="bg-gray-50 border border-dashed border-gray-200 rounded-xl p-2 text-center flex items-center justify-center min-h-[72px] md:min-h-[100px]">
+          <div className="bg-white border border-dashed border-gray-200 rounded-lg p-2 text-center flex items-center justify-center min-h-[80px]">
             <p className="text-[10px] text-gray-400 italic">Définir d'abord le niveau inférieur</p>
           </div>
         );
       }
       const options = cheptel.filter(l => l.sexe === sexeRequis && l.id !== enfantId && l.statut !== 'Vendu' && l.statut !== 'Mort');
       return (
-        <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-2 text-center flex flex-col justify-center items-center min-h-[72px] md:min-h-[100px] gap-1.5">
+        <div className="bg-white border-2 border-dashed border-gray-300 rounded-lg p-2 text-center flex flex-col justify-center items-center min-h-[80px] gap-1.5 shadow-sm">
           <p className="text-[10px] font-bold text-gray-500">➕ {role}</p>
           <select
             onChange={e => { if (e.target.value) associerParent(enfantId, e.target.value, sexeRequis === 'M' ? 'pere' : 'mere'); }}
@@ -125,39 +132,75 @@ export default function ArbreGenealogique() {
       );
     }
 
+    // ── Carte remplie ────────────────────────────────────────────────────────
     const estMale = lapin.sexe === 'M';
     const possedeEnfants = aDesEnfants(lapin.tatouage);
 
-    let cardStyle = estMale
-      ? 'bg-blue-50/70 border-blue-100 text-blue-900'
-      : 'bg-purple-50/70 border-purple-100 text-purple-900';
-    if (estCible) cardStyle = 'ring-4 ring-indigo-600 bg-indigo-50 border-indigo-300 text-indigo-950';
+    const borderAccent = estCible
+      ? 'border-t-4 border-indigo-500'
+      : estMale
+        ? 'border-t-4 border-blue-500'
+        : 'border-t-4 border-pink-500';
+
+    const ring = estCible ? 'ring-2 ring-indigo-400 ring-offset-1' : '';
 
     return (
-      <div className={`relative border rounded-xl p-2 md:p-3 flex flex-col justify-center items-center min-h-[72px] md:min-h-[100px] shadow-sm ${cardStyle}`}>
+      <div className={`relative bg-white rounded-lg shadow-sm overflow-hidden ${borderAccent} ${ring}`}>
 
+        {/* Bouton retirer */}
         {!estCible && onRetirer && (
           <button
             onClick={e => { e.stopPropagation(); onRetirer(); }}
-            className="absolute top-1 right-1 bg-white/80 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-full w-5 h-5 flex items-center justify-center text-[9px] font-bold border border-gray-200 z-10"
+            className="absolute top-1.5 right-1.5 bg-gray-100 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-full w-5 h-5 flex items-center justify-center text-[9px] font-bold z-10"
             title="Retirer le lien"
           >✕</button>
         )}
 
-        {/* Tatouage + sexe sur une ligne */}
-        <p className="font-extrabold uppercase tracking-wide text-sm leading-tight flex items-center gap-1">
-          <span className="text-base">{estMale ? '🐇' : '🐰'}</span>
-          {lapin.tatouage}
-          <span className={`text-xs font-black ${estMale ? 'text-blue-500' : 'text-rose-500'}`}>{estMale ? '♂' : '♀'}</span>
-        </p>
-        <p className="text-[10px] opacity-60 font-medium truncate max-w-full px-1">{lapin.race || 'Race ?'}</p>
+        {/* ── En-tête : icône + tatouage en évidence ── */}
+        <div className="px-2.5 pt-2.5 flex items-center gap-1.5 pr-7">
+          <span className="text-base shrink-0">{estMale ? '🐇' : '🐰'}</span>
+          <p className={`font-bold text-base uppercase tracking-wide leading-none truncate flex-1 ${estCible ? 'text-indigo-900' : 'text-gray-900'}`}>
+            {lapin.tatouage}
+          </p>
+          <span className={`text-sm font-black shrink-0 ${estMale ? 'text-blue-500' : 'text-pink-500'}`}>
+            {estMale ? '♂' : '♀'}
+          </span>
+        </div>
 
-        {/* Boutons navigation */}
+        {/* ── Mini-grille caractéristiques ── */}
+        <div className="grid grid-cols-2 gap-x-2 text-xs text-gray-500 mt-2 px-2.5 pb-2">
+          <div className="min-w-0">
+            <span className="text-[9px] text-gray-400 uppercase font-bold block leading-tight">Race</span>
+            <span className="font-semibold text-gray-700 truncate block text-[11px]">{lapin.race || '—'}</span>
+          </div>
+          <div className="min-w-0">
+            <span className="text-[9px] text-gray-400 uppercase font-bold block leading-tight">Couleur</span>
+            <span className="font-semibold text-gray-700 truncate block text-[11px]">{lapin.couleur || '—'}</span>
+          </div>
+          {(lapin.dateNaissance || lapin.poids) && (
+            <>
+              <div className="min-w-0 mt-1">
+                <span className="text-[9px] text-gray-400 uppercase font-bold block leading-tight">Né(e) le</span>
+                <span className="font-semibold text-gray-700 block text-[11px]">
+                  {lapin.dateNaissance ? fmtDate(lapin.dateNaissance) : '—'}
+                </span>
+              </div>
+              <div className="min-w-0 mt-1">
+                <span className="text-[9px] text-gray-400 uppercase font-bold block leading-tight">Poids</span>
+                <span className="font-semibold text-gray-700 block text-[11px]">
+                  {lapin.poids ? `${lapin.poids} kg` : '—'}
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ── Boutons navigation (non-sujets uniquement) ── */}
         {!estCible && (
-          <div className="mt-1.5 flex gap-1 w-full">
+          <div className="flex gap-1 px-2.5 pb-2.5 pt-1.5 border-t border-gray-100">
             <button
               onClick={e => { e.stopPropagation(); setSelectedId(lapin.id); }}
-              className="flex-1 text-[9px] md:text-[10px] bg-white/80 border border-gray-300 py-1 rounded-lg font-bold text-gray-600 hover:bg-gray-50 active:opacity-75"
+              className="flex-1 text-[9px] md:text-[10px] bg-gray-50 border border-gray-200 py-1 rounded-lg font-bold text-gray-600 hover:bg-gray-100 active:opacity-75"
               title="Centrer l'arbre ici"
             >
               <span className="md:hidden">⬆️</span>
@@ -166,7 +209,7 @@ export default function ArbreGenealogique() {
             {possedeEnfants && (
               <button
                 onClick={e => { e.stopPropagation(); pivoterVersEnfant(lapin.tatouage); }}
-                className={`flex-1 text-[9px] md:text-[10px] border py-1 rounded-lg font-bold active:opacity-75 ${estCible ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-white/80 border-indigo-200 text-indigo-600 hover:bg-indigo-50'}`}
+                className="flex-1 text-[9px] md:text-[10px] border border-indigo-200 bg-indigo-50 text-indigo-600 py-1 rounded-lg font-bold hover:bg-indigo-100 active:opacity-75"
                 title="Descendre vers un enfant"
               >
                 <span className="md:hidden">👶</span>
