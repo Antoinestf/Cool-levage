@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import { QRCodeCanvas } from 'qrcode.react';
 
 // Chargement dynamique pour éviter les erreurs SSR (qrcode.react utilise le canvas)
 const QrCodeLapin = dynamic(() => import('@/components/QrCodeLapin'), { ssr: false });
@@ -38,6 +39,8 @@ export default function CheptelPage() {
   const [nouveauLapin, setNouveauLapin] = useState<Omit<Lapin, 'id'>>({
     tatouage: '', sexe: 'M', statut: 'Reproducteur', dateNaissance: '', race: '', pere: '', mere: '', soins: [],
   });
+
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
 
   const [viewMode, setViewMode]     = useState<'liste' | 'bloc'>('bloc');
   const [showCareForm, setShowCareForm] = useState<Record<string, boolean>>({});
@@ -133,6 +136,18 @@ export default function CheptelPage() {
     setShowCareForm(p => ({ ...p, [lapinId]: false }));
   };
 
+  const telechargerQR = (tatouage: string) => {
+    const canvas = canvasContainerRef.current?.querySelector('canvas');
+    if (!canvas) return;
+    const url = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `QRCode_Lapin_${tatouage}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   if (!isLoaded) return <div className="p-6 text-gray-500">Chargement…</div>;
 
   const males   = cheptel.filter(l => l.sexe === 'M').length;
@@ -161,6 +176,14 @@ export default function CheptelPage() {
                   Imprimez et collez ce QR sur la cage.<br/>
                   Scannez pour ouvrir la fiche directement.
                 </p>
+                {/* Canvas haute résolution hors-écran — utilisé uniquement pour le téléchargement PNG */}
+                <div ref={canvasContainerRef} className="sr-only">
+                  <QRCodeCanvas value={l.id} size={400} bgColor="#ffffff" fgColor="#1e1b4b" level="H" marginSize={1} />
+                </div>
+                <button onClick={() => telechargerQR(l.tatouage)}
+                  className="w-full py-2.5 rounded-xl bg-gray-800 text-white font-bold text-sm hover:bg-gray-900 active:opacity-75 transition-colors">
+                  ⬇️ Télécharger le QR Code
+                </button>
                 <Link href={`/lapin/${l.id}`}
                   className="w-full text-center py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 active:opacity-75 transition-colors">
                   Voir la fiche complète →
