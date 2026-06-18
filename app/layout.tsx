@@ -20,12 +20,13 @@ export const viewport: Viewport = {
 };
 
 const NAV_LINKS = [
-  { href: "/",             icon: "📊", label: "Bord"        },
-  { href: "/cheptel",      icon: "🐇", label: "Cheptel"     },
-  { href: "/naissances",   icon: "🍼", label: "Repro"       },
-  { href: "/provende",     icon: "🌾", label: "Provende"    },
-  { href: "/performances", icon: "📈", label: "Perfs"       },
-  { href: "/genealogie",   icon: "🌳", label: "Généalogie"  },
+  { href: "/",             icon: "📊", label: "Bord"      },
+  { href: "/cheptel",      icon: "🐇", label: "Cheptel"   },
+  { href: "/naissances",   icon: "🍼", label: "Repro"     },
+  { href: "/provende",     icon: "🌾", label: "Provende"  },
+  { href: "/performances", icon: "📈", label: "Perfs"     },
+  { href: "/genealogie",   icon: "🌳", label: "Généal"    },
+  { href: "/export",       icon: "📤", label: "Export"    },
 ];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -53,7 +54,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   className="flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors hover:bg-zinc-800 font-medium text-sm"
                 >
                   <span className="text-base">{icon}</span>
-                  <span>{label === "Bord" ? "Tableau de bord" : label === "Repro" ? "Naissances & Sevrage" : label === "Généalogie" ? "Généalogie" : label === "Associés" ? "Espace Associés" : label}</span>
+                  <span>{
+                    label === "Bord"    ? "Tableau de bord"     :
+                    label === "Repro"   ? "Naissances & Sevrage":
+                    label === "Généal"  ? "Généalogie"          :
+                    label === "Export"  ? "Export & Rapports"   :
+                    label
+                  }</span>
                 </Link>
               ))}
             </nav>
