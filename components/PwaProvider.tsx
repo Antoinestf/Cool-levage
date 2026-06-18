@@ -14,16 +14,33 @@ export default function PwaProvider() {
 
   // ── Enregistrement du Service Worker ──────────────────────────────────────
   useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker
-        .register("/sw.js")
-        .then((reg) => {
-          setSwActif(true);
-          // Vérifie les mises à jour toutes les 60 secondes quand en ligne
-          setInterval(() => reg.update(), 60_000);
-        })
-        .catch(() => {/* SW non supporté sur cet appareil */});
-    }
+    if (!("serviceWorker" in navigator)) return;
+
+    let timer: ReturnType<typeof setInterval>;
+
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then((reg) => {
+        setSwActif(true);
+        // Vérification périodique des mises à jour — .catch() obligatoire :
+        // sans lui, une InvalidStateError (SW en état invalide ou stale)
+        // devient une rejection non gérée et pollue la console toutes les 60s.
+        timer = setInterval(() => { reg.update().catch(() => {}); }, 60_000);
+      })
+      .catch(() => {
+        // SW en état invalide (stale registration) → on purge tout et on réessaie.
+        // Cela résout l'erreur "Unknown script" qui apparaît après un changement
+        // de scope ou une corruption du cache du navigateur.
+        navigator.serviceWorker
+          .getRegistrations()
+          .then((regs) => Promise.all(regs.map((r) => r.unregister())))
+          .then(() => navigator.serviceWorker.register("/sw.js"))
+          .then(() => setSwActif(true))
+          .catch(() => {}); // Silencieux : certains appareils ne supportent pas les SW
+      });
+
+    // Nettoyage à démontage : évite les fuites mémoire si le composant remonte
+    return () => { if (timer) clearInterval(timer); };
   }, []);
 
   // ── Détection Online / Offline ─────────────────────────────────────────────

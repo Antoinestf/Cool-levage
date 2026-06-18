@@ -151,7 +151,7 @@ export default function ArbreGenealogique() {
         {!estCible && onRetirer && (
           <button
             onClick={e => { e.stopPropagation(); onRetirer(); }}
-            className="absolute top-1.5 right-1.5 bg-gray-100 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-full w-5 h-5 flex items-center justify-center text-[9px] font-bold z-10"
+            className="print:hidden absolute top-1.5 right-1.5 bg-gray-100 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-full w-5 h-5 flex items-center justify-center text-[9px] font-bold z-10"
             title="Retirer le lien"
           >✕</button>
         )}
@@ -197,7 +197,7 @@ export default function ArbreGenealogique() {
 
         {/* ── Boutons navigation (non-sujets uniquement) ── */}
         {!estCible && (
-          <div className="flex gap-1 px-2.5 pb-2.5 pt-1.5 border-t border-gray-100">
+          <div className="print:hidden flex gap-1 px-2.5 pb-2.5 pt-1.5 border-t border-gray-100">
             <button
               onClick={e => { e.stopPropagation(); setSelectedId(lapin.id); }}
               className="flex-1 text-[9px] md:text-[10px] bg-gray-50 border border-gray-200 py-1 rounded-lg font-bold text-gray-600 hover:bg-gray-100 active:opacity-75"
@@ -228,9 +228,10 @@ export default function ArbreGenealogique() {
       {/* ── Print CSS — pedigree propre ──────────────────────────────────────── */}
       <style>{`
         @media print {
+          @page { margin: 0; }
           aside, nav, .no-print { display: none !important; }
           main { padding: 0 !important; overflow: visible !important; height: auto !important; }
-          body { background: white !important; }
+          body { background: white !important; margin: 1.6cm !important; }
           .pedigree-print { box-shadow: none !important; border: 1px solid #ccc !important; }
         }
       `}</style>
