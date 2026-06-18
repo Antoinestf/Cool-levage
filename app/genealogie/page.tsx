@@ -12,270 +12,253 @@ interface Lapin {
 }
 
 export default function ArbreGenealogique() {
-  const [cheptel, setCheptel] = useState<Lapin[]>([]);
-  // LA GRANDE CORRECTION : On utilise l'ID invisible et unique au lieu du texte !
+  const [cheptel, setCheptel]     = useState<Lapin[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoaded, setIsLoaded]   = useState(false);
 
   useEffect(() => {
     const donnees = localStorage.getItem('ferme_cheptel');
     if (donnees) {
-      const parsedCheptel = JSON.parse(donnees);
-      setCheptel(parsedCheptel);
-      
+      const parsed: Lapin[] = JSON.parse(donnees);
+      setCheptel(parsed);
       const urlParams = new URLSearchParams(window.location.search);
-      const tatouageDepuisUrl = urlParams.get('tatouage');
-      
-      if (tatouageDepuisUrl) {
-        const matched = parsedCheptel.find((l: Lapin) => l.tatouage === tatouageDepuisUrl);
-        if (matched) setSelectedId(matched.id);
-      } else if (parsedCheptel.length > 0) {
-        setSelectedId(parsedCheptel[0].id);
+      const tatouageUrl = urlParams.get('tatouage');
+      if (tatouageUrl) {
+        const matched = parsed.find(l => l.tatouage === tatouageUrl);
+        if (matched) { setSelectedId(matched.id); return; }
       }
+      if (parsed.length > 0) setSelectedId(parsed[0].id);
     }
     setIsLoaded(true);
   }, []);
 
-  // On modifie les liaisons pour être sûr de cibler le bon lapin via son ID
   const associerParent = (enfantId: number, parentTatouage: string, lien: 'pere' | 'mere') => {
-    const nouveauCheptel = cheptel.map(lapin => {
-      if (lapin.id === enfantId) {
-        return { ...lapin, [lien]: parentTatouage };
-      }
-      return lapin;
-    });
-    setCheptel(nouveauCheptel);
-    localStorage.setItem('ferme_cheptel', JSON.stringify(nouveauCheptel));
+    const maj = cheptel.map(l => l.id === enfantId ? { ...l, [lien]: parentTatouage } : l);
+    setCheptel(maj);
+    localStorage.setItem('ferme_cheptel', JSON.stringify(maj));
   };
 
   const retirerParent = (enfantId: number, lien: 'pere' | 'mere') => {
-    const nouveauCheptel = cheptel.map(lapin => {
-      if (lapin.id === enfantId) {
-        const copieLapin = { ...lapin };
-        delete copieLapin[lien];
-        return copieLapin;
-      }
-      return lapin;
+    const maj = cheptel.map(l => {
+      if (l.id !== enfantId) return l;
+      const c = { ...l }; delete c[lien]; return c;
     });
-    setCheptel(nouveauCheptel);
-    localStorage.setItem('ferme_cheptel', JSON.stringify(nouveauCheptel));
+    setCheptel(maj);
+    localStorage.setItem('ferme_cheptel', JSON.stringify(maj));
   };
 
-  // Logique de détective améliorée sans objet factice
   const trouverAncetre = (enfantId: number | undefined, lien: 'pere' | 'mere'): Lapin | null => {
     if (!enfantId) return null;
     const enfant = cheptel.find(l => l.id === enfantId);
     if (!enfant) return null;
-    
-    const tatouageAncetre = lien === 'pere' ? enfant.pere : enfant.mere;
-    if (!tatouageAncetre) return null;
-    
-    return cheptel.find(l => l.tatouage === tatouageAncetre) || null;
+    const tatouage = lien === 'pere' ? enfant.pere : enfant.mere;
+    if (!tatouage) return null;
+    return cheptel.find(l => l.tatouage === tatouage) || null;
   };
 
-  const pivoterVersEnfant = (tatouageParent: string | undefined) => {
-    if (!tatouageParent) return;
-    const enfantDirect = cheptel.find(l => l.pere === tatouageParent || l.mere === tatouageParent);
-    if (enfantDirect) {
-      setSelectedId(enfantDirect.id); // On cible le VRAI lapin unique
-    }
+  const pivoterVersEnfant = (tatouage: string | undefined) => {
+    if (!tatouage) return;
+    const enfant = cheptel.find(l => l.pere === tatouage || l.mere === tatouage);
+    if (enfant) setSelectedId(enfant.id);
   };
 
-  const aDesEnfants = (tatouage: string | undefined) => {
-    if (!tatouage) return false;
-    return cheptel.some(l => l.pere === tatouage || l.mere === tatouage);
-  };
+  const aDesEnfants = (tatouage: string | undefined) =>
+    !!tatouage && cheptel.some(l => l.pere === tatouage || l.mere === tatouage);
 
-  if (!isLoaded) return <div className="p-8 text-gray-500 italic">Chargement...</div>;
+  if (!isLoaded) return <div className="p-6 text-gray-400">Chargement…</div>;
 
   const cible = cheptel.find(l => l.id === selectedId);
-  const pere = trouverAncetre(cible?.id, 'pere');
-  const mere = trouverAncetre(cible?.id, 'mere');
-  const gpp = trouverAncetre(pere?.id, 'pere'); 
-  const gmp = trouverAncetre(pere?.id, 'mere'); 
-  const gpm = trouverAncetre(mere?.id, 'pere'); 
-  const gmm = trouverAncetre(mere?.id, 'mere'); 
+  const pere  = trouverAncetre(cible?.id, 'pere');
+  const mere  = trouverAncetre(cible?.id, 'mere');
+  const gpp   = trouverAncetre(pere?.id, 'pere');
+  const gmp   = trouverAncetre(pere?.id, 'mere');
+  const gpm   = trouverAncetre(mere?.id, 'pere');
+  const gmm   = trouverAncetre(mere?.id, 'mere');
 
   const analyserConsanguinite = () => {
-    if (!pere || !mere) return { taux: '0%', style: 'bg-green-50 border-green-300 text-green-900', msg: '✅ Sécurité : Parenté incomplète ou croisement neuf.' };
-    
-    const tPere = pere.tatouage;
-    const tMere = mere.tatouage;
-    const tGpp = gpp ? gpp.tatouage : null;
-    const tGmp = gmp ? gmp.tatouage : null;
-    const tGpm = gpm ? gpm.tatouage : null;
-    const tGmm = gmm ? gmm.tatouage : null;
-
-    const sontFrereEtSoeur = (tGpp && tGpp === tGpm) || (tGmp && tGmp === tGmm);
-    if (sontFrereEtSoeur || tPere === tGpm || tMere === tGpp || tPere === tMere) {
-      return { taux: '25%', style: 'bg-red-50 border-red-300 text-red-900 ring-2 ring-red-500', msg: '❌ DANGER ABSOLU : Taux à 25% (Accouplement Frère/Sœur ou Parent/Enfant).' };
-    }
-
-    const gpsPaternels = [tGpp, tGmp].filter(Boolean);
-    const gpsMaternels = [tGpm, tGmm].filter(Boolean);
-    if (gpsPaternels.some(gp => gpsMaternels.includes(gp))) {
-      return { taux: '6,25% à 12,5%', style: 'bg-amber-50 border-amber-300 text-amber-900', msg: '⚠️ ATTENTION : Grands-parents en commun (Cousins).' };
-    }
-
-    return { taux: '0%', style: 'bg-green-50 border-green-300 text-green-900', msg: '✅ SÉCURITÉ TOTALE : Taux de consanguinité à 0%.' };
+    if (!pere || !mere) return { taux: '—', style: 'bg-green-50 border-green-300 text-green-900', msg: '✅ Parenté incomplète — pas de risque détecté.' };
+    const [tPere, tMere] = [pere.tatouage, mere.tatouage];
+    const tGpp = gpp?.tatouage ?? null, tGmp = gmp?.tatouage ?? null;
+    const tGpm = gpm?.tatouage ?? null, tGmm = gmm?.tatouage ?? null;
+    const freresoeur = (tGpp && tGpp === tGpm) || (tGmp && tGmp === tGmm);
+    if (freresoeur || tPere === tGpm || tMere === tGpp || tPere === tMere)
+      return { taux: '25%', style: 'bg-red-50 border-red-300 text-red-900 ring-2 ring-red-500', msg: '❌ DANGER : Frère/Sœur ou Parent/Enfant — accouplement à éviter absolument.' };
+    const gpPat = [tGpp, tGmp].filter(Boolean);
+    const gpMat = [tGpm, tGmm].filter(Boolean);
+    if (gpPat.some(gp => gpMat.includes(gp)))
+      return { taux: '6–12%', style: 'bg-amber-50 border-amber-300 text-amber-900', msg: '⚠️ Grands-parents communs — cousins germains, à limiter.' };
+    return { taux: '0%', style: 'bg-green-50 border-green-300 text-green-900', msg: '✅ Aucune consanguinité détectée.' };
   };
 
   const diagnostic = analyserConsanguinite();
 
-  const CaseLapin = ({ 
-    lapin, 
-    role, 
-    sexeRequis, 
-    enfantId,
-    estCible = false,
-    onRetirer
-  }: { 
-    lapin: Lapin | null, 
-    role: string,
-    sexeRequis: 'M' | 'F',
-    enfantId?: number,
-    estCible?: boolean,
-    onRetirer?: () => void
+  // ── Carte lapin ─────────────────────────────────────────────────────────────
+  const CaseLapin = ({
+    lapin, role, sexeRequis, enfantId, estCible = false, onRetirer,
+  }: {
+    lapin: Lapin | null; role: string; sexeRequis: 'M' | 'F';
+    enfantId?: number; estCible?: boolean; onRetirer?: () => void;
   }) => {
-    
     if (!lapin) {
       if (!enfantId) {
         return (
-          <div className="bg-gray-100 border border-gray-300 border-dashed rounded-xl p-4 text-center text-xs text-gray-400 min-h-[110px] flex flex-col justify-center">
-            <p className="italic text-[11px]">Définir d'abord le dessous</p>
+          <div className="bg-gray-50 border border-dashed border-gray-200 rounded-xl p-2 text-center flex items-center justify-center min-h-[72px] md:min-h-[100px]">
+            <p className="text-[10px] text-gray-400 italic">Définir d'abord le niveau inférieur</p>
           </div>
         );
       }
-
-      // On empêche de se choisir soi-même comme parent !
-      const listOptions = cheptel.filter(l => l.sexe === sexeRequis && l.id !== enfantId && l.statut !== 'Vendu' && l.statut !== 'Mort');
-
+      const options = cheptel.filter(l => l.sexe === sexeRequis && l.id !== enfantId && l.statut !== 'Vendu' && l.statut !== 'Mort');
       return (
-        <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-3 text-center min-h-[110px] flex flex-col justify-center items-center">
-          <p className="text-xs font-bold text-gray-500 mb-2">➕ {role}</p>
+        <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-2 text-center flex flex-col justify-center items-center min-h-[72px] md:min-h-[100px] gap-1.5">
+          <p className="text-[10px] font-bold text-gray-500">➕ {role}</p>
           <select
-            onChange={(e) => {
-              if (e.target.value) associerParent(enfantId, e.target.value, sexeRequis === 'M' ? 'pere' : 'mere');
-            }}
-            className="text-xs border border-gray-300 rounded p-1 bg-white max-w-full font-medium outline-none text-gray-700"
+            onChange={e => { if (e.target.value) associerParent(enfantId, e.target.value, sexeRequis === 'M' ? 'pere' : 'mere'); }}
+            className="text-[11px] border border-gray-300 rounded-lg px-1.5 py-1 bg-white w-full font-medium text-gray-700 focus:outline-none"
             defaultValue=""
           >
-            <option value="" disabled>Choisir...</option>
-            {listOptions.map(l => (
-              <option key={l.id} value={l.tatouage}>{l.tatouage}</option>
-            ))}
+            <option value="" disabled>Choisir…</option>
+            {options.map(l => <option key={l.id} value={l.tatouage}>{l.tatouage}</option>)}
           </select>
         </div>
       );
     }
 
     const estMale = lapin.sexe === 'M';
-    const possedeDesEnfants = aDesEnfants(lapin.tatouage);
-    
-    let cardStyle = estMale 
-      ? 'bg-blue-50/60 border-gray-200 text-blue-900'
-      : 'bg-purple-50/60 border-gray-200 text-purple-900';
-    
-    if (estCible) {
-      cardStyle = 'ring-4 ring-indigo-600 bg-indigo-50 text-indigo-950 border-indigo-300';
-    }
-    
+    const possedeEnfants = aDesEnfants(lapin.tatouage);
+
+    let cardStyle = estMale
+      ? 'bg-blue-50/70 border-blue-100 text-blue-900'
+      : 'bg-purple-50/70 border-purple-100 text-purple-900';
+    if (estCible) cardStyle = 'ring-4 ring-indigo-600 bg-indigo-50 border-indigo-300 text-indigo-950';
+
     return (
-      <div className={`relative border rounded-xl p-3 text-center flex flex-col justify-center items-center h-full min-h-[110px] shadow-xs ${cardStyle}`}>
-        
+      <div className={`relative border rounded-xl p-2 md:p-3 flex flex-col justify-center items-center min-h-[72px] md:min-h-[100px] shadow-sm ${cardStyle}`}>
+
         {!estCible && onRetirer && (
-          <button 
-            onClick={(e) => { e.stopPropagation(); onRetirer(); }}
-            className="absolute top-1 right-1 bg-white hover:bg-gray-100 text-gray-400 hover:text-red-500 rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold border border-gray-200 z-10 cursor-pointer"
+          <button
+            onClick={e => { e.stopPropagation(); onRetirer(); }}
+            className="absolute top-1 right-1 bg-white/80 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-full w-5 h-5 flex items-center justify-center text-[9px] font-bold border border-gray-200 z-10"
             title="Retirer le lien"
-          >
-            ✕
-          </button>
+          >✕</button>
         )}
 
-        <span className="text-xl mb-1">{estMale ? '🐇' : '🐰'}</span>
-        
-        <p className="font-extrabold uppercase tracking-wider text-sm flex items-center gap-1">
-          {lapin.tatouage} 
-          <span className={`text-xs font-bold ${estMale ? 'text-blue-600' : 'text-rose-500'}`}>{estMale ? '♂' : '♀'}</span>
+        {/* Tatouage + sexe sur une ligne */}
+        <p className="font-extrabold uppercase tracking-wide text-sm leading-tight flex items-center gap-1">
+          <span className="text-base">{estMale ? '🐇' : '🐰'}</span>
+          {lapin.tatouage}
+          <span className={`text-xs font-black ${estMale ? 'text-blue-500' : 'text-rose-500'}`}>{estMale ? '♂' : '♀'}</span>
         </p>
-        <p className="text-[10px] opacity-70 font-medium">{lapin.race || 'Race inc.'}</p>
+        <p className="text-[10px] opacity-60 font-medium truncate max-w-full px-1">{lapin.race || 'Race ?'}</p>
 
-        <div className="mt-2 flex gap-1 justify-center w-full">
-          {!estCible && (
+        {/* Boutons navigation */}
+        {!estCible && (
+          <div className="mt-1.5 flex gap-1 w-full">
             <button
-              onClick={(e) => { e.stopPropagation(); setSelectedId(lapin.id); }}
-              className="text-[9px] bg-white border border-gray-300 px-2 py-1 rounded font-bold text-gray-600 hover:bg-gray-100 shadow-sm flex-1 cursor-pointer"
+              onClick={e => { e.stopPropagation(); setSelectedId(lapin.id); }}
+              className="flex-1 text-[9px] md:text-[10px] bg-white/80 border border-gray-300 py-1 rounded-lg font-bold text-gray-600 hover:bg-gray-50 active:scale-95"
               title="Centrer l'arbre ici"
             >
-              ⬆️ Centrer
+              <span className="md:hidden">⬆️</span>
+              <span className="hidden md:inline">⬆️ Centrer</span>
             </button>
-          )}
-
-          {possedeDesEnfants && (
-            <button
-              onClick={(e) => { e.stopPropagation(); pivoterVersEnfant(lapin.tatouage); }}
-              className={`text-[9px] border px-2 py-1 rounded font-bold shadow-sm flex-1 cursor-pointer ${estCible ? 'bg-indigo-50 border-indigo-400 text-indigo-700 hover:bg-indigo-100' : 'bg-white border-indigo-300 text-indigo-600 hover:bg-indigo-50'}`}
-              title="Descendre d'une génération"
-            >
-              👶 Voir enfant
-            </button>
-          )}
-        </div>
+            {possedeEnfants && (
+              <button
+                onClick={e => { e.stopPropagation(); pivoterVersEnfant(lapin.tatouage); }}
+                className={`flex-1 text-[9px] md:text-[10px] border py-1 rounded-lg font-bold active:scale-95 ${estCible ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-white/80 border-indigo-200 text-indigo-600 hover:bg-indigo-50'}`}
+                title="Descendre vers un enfant"
+              >
+                <span className="md:hidden">👶</span>
+                <span className="hidden md:inline">👶 Enfant</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
     );
   };
 
   return (
-    <div className="p-4 md:p-8 bg-gray-50 min-h-screen">
-      <div className="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Généalogie Interactive</h1>
-          <p className="text-gray-500 text-sm mt-1">Naviguez avec les boutons ⬆️ et 👶 pour explorer tout l'historique.</p>
+    <div className="p-3 md:p-6 bg-gray-50 min-h-screen">
+
+      {/* ── En-tête compact ──────────────────────────────────────────────────── */}
+      <div className="bg-white px-4 py-3 md:p-5 rounded-2xl border border-gray-200 shadow-sm mb-4 flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-lg md:text-2xl font-bold text-gray-900 leading-tight">🌳 Généalogie</h1>
+          <p className="text-gray-400 text-[11px] md:text-sm mt-0.5 truncate">Naviguez avec ⬆️ Centrer et 👶 Enfant pour explorer.</p>
         </div>
-        <div className="flex gap-4 items-center">
-          <label className="font-medium text-gray-700">Sujet cible :</label>
-          <select value={selectedId || ''} onChange={(e) => setSelectedId(Number(e.target.value))} className="border border-gray-300 rounded-md p-3 font-bold bg-white outline-none">
-            {cheptel.map(l => <option key={l.id} value={l.id}>{l.tatouage}</option>)}
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-xs font-semibold text-gray-500 hidden sm:inline">Sujet :</span>
+          <select
+            value={selectedId || ''}
+            onChange={e => setSelectedId(Number(e.target.value))}
+            className="border border-gray-300 rounded-xl px-3 py-2 text-sm font-bold bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 max-w-[160px] sm:max-w-none"
+          >
+            {cheptel.map(l => <option key={l.id} value={l.id}>{l.tatouage} {l.sexe === 'M' ? '♂' : '♀'}</option>)}
           </select>
         </div>
       </div>
 
-      <div className={`p-6 rounded-xl border mb-8 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4 ${diagnostic.style}`}>
-        <div className="flex-1"><p className="text-sm uppercase tracking-wider font-bold opacity-75">Analyse ADN</p><p className="font-medium mt-1">{diagnostic.msg}</p></div>
-        <div className="text-center px-6 py-3 bg-white/40 rounded-xl min-w-[140px]"><p className="text-xs font-bold opacity-70">Taux</p><p className="text-2xl font-extrabold">{diagnostic.taux}</p></div>
+      {/* ── Diagnostic consanguinité ─────────────────────────────────────────── */}
+      <div className={`px-4 py-3 md:p-5 rounded-2xl border mb-4 shadow-sm flex items-center gap-3 ${diagnostic.style}`}>
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] uppercase tracking-widest font-bold opacity-60 mb-0.5">Analyse consanguinité</p>
+          <p className="text-sm font-semibold leading-snug">{diagnostic.msg}</p>
+        </div>
+        <div className="text-center px-4 py-2 bg-white/50 rounded-xl shrink-0">
+          <p className="text-[10px] font-bold opacity-60">Taux</p>
+          <p className="text-xl font-extrabold leading-tight">{diagnostic.taux}</p>
+        </div>
       </div>
 
+      {/* ── Arbre généalogique ───────────────────────────────────────────────── */}
       {cheptel.length > 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm flex flex-col gap-6 max-w-4xl mx-auto">
-          
-            {/* Grands-parents — 4 cols desktop, 2 cols mobile */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
-            <CaseLapin lapin={gpp} role="Papi Pat." sexeRequis="M" enfantId={pere?.id} onRetirer={() => pere && retirerParent(pere.id, 'pere')} />
-            <CaseLapin lapin={gmp} role="Mamie Pat." sexeRequis="F" enfantId={pere?.id} onRetirer={() => pere && retirerParent(pere.id, 'mere')} />
-            <CaseLapin lapin={gpm} role="Papi Mat." sexeRequis="M" enfantId={mere?.id} onRetirer={() => mere && retirerParent(mere.id, 'pere')} />
-            <CaseLapin lapin={gmm} role="Mamie Mat." sexeRequis="F" enfantId={mere?.id} onRetirer={() => mere && retirerParent(mere.id, 'mere')} />
-          </div>
+        <div className="bg-white rounded-2xl border border-gray-200 p-3 md:p-8 shadow-sm flex flex-col gap-3 md:gap-6 max-w-4xl mx-auto">
 
-          <div className="hidden md:grid grid-cols-2 text-center text-gray-300 h-2 text-sm -my-2"><div>└───┬───┘</div><div>└───┬───┘</div></div>
-
-          {/* Parents */}
-          <div className="grid grid-cols-2 gap-3 md:gap-16 md:px-12">
-            <CaseLapin lapin={pere} role="le Père" sexeRequis="M" enfantId={cible?.id} onRetirer={() => cible && retirerParent(cible.id, 'pere')} />
-            <CaseLapin lapin={mere} role="la Mère" sexeRequis="F" enfantId={cible?.id} onRetirer={() => cible && retirerParent(cible.id, 'mere')} />
-          </div>
-
-          <div className="hidden md:block text-center text-gray-300 h-2 text-lg -my-2">└───┬───┘</div>
-
-          {/* Sujet */}
-          <div className="flex justify-center">
-            <div className="w-1/2 max-w-[250px]">
-              <CaseLapin lapin={cible || null} role="Sujet" sexeRequis="M" estCible={true} />
+          {/* Grands-parents */}
+          <div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 text-center">Grands-parents</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
+              <CaseLapin lapin={gpp} role="Papi Pat." sexeRequis="M" enfantId={pere?.id} onRetirer={() => pere && retirerParent(pere.id, 'pere')} />
+              <CaseLapin lapin={gmp} role="Mamie Pat." sexeRequis="F" enfantId={pere?.id} onRetirer={() => pere && retirerParent(pere.id, 'mere')} />
+              <CaseLapin lapin={gpm} role="Papi Mat." sexeRequis="M" enfantId={mere?.id} onRetirer={() => mere && retirerParent(mere.id, 'pere')} />
+              <CaseLapin lapin={gmm} role="Mamie Mat." sexeRequis="F" enfantId={mere?.id} onRetirer={() => mere && retirerParent(mere.id, 'mere')} />
             </div>
           </div>
+
+          {/* Connecteur desktop */}
+          <div className="hidden md:grid grid-cols-2 text-center text-gray-300 text-sm -my-3">
+            <div>└───┬───┘</div><div>└───┬───┘</div>
+          </div>
+
+          {/* Parents */}
+          <div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 text-center">Parents</p>
+            <div className="grid grid-cols-2 gap-2 md:gap-12 md:px-16">
+              <CaseLapin lapin={pere} role="le Père" sexeRequis="M" enfantId={cible?.id} onRetirer={() => cible && retirerParent(cible.id, 'pere')} />
+              <CaseLapin lapin={mere} role="la Mère" sexeRequis="F" enfantId={cible?.id} onRetirer={() => cible && retirerParent(cible.id, 'mere')} />
+            </div>
+          </div>
+
+          {/* Connecteur desktop */}
+          <div className="hidden md:block text-center text-gray-300 text-lg -my-3">└───┬───┘</div>
+
+          {/* Sujet */}
+          <div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 text-center">Sujet</p>
+            <div className="flex justify-center">
+              <div className="w-1/2 max-w-[220px]">
+                <CaseLapin lapin={cible || null} role="Sujet" sexeRequis="M" estCible={true} />
+              </div>
+            </div>
+          </div>
+
         </div>
       ) : (
-        <div className="bg-white p-12 text-center rounded-xl text-gray-500 italic">Aucun animal disponible.</div>
+        <div className="bg-white p-10 text-center rounded-2xl border border-gray-100 text-gray-400">
+          <p className="text-3xl mb-2">🌳</p>
+          <p className="font-medium text-gray-500">Aucun animal enregistré</p>
+          <p className="text-xs mt-1">Ajoutez des lapins dans Cheptel pour commencer</p>
+        </div>
       )}
     </div>
   );

@@ -323,14 +323,14 @@ export default function NaissancesPage() {
               const estSevree  = portee.statut === 'Sevrée';
               const confirmer  = sevrageEnCours === portee.id;
 
-              // Couleur badge âge
+              // Couleur badge âge — seuil unique : 35j
               const ageCouleur = estSevree
                 ? 'bg-gray-100 text-gray-500'
-                : age < 21
+                : age < 35
                   ? 'bg-red-100 text-red-700'
-                  : age < 35
-                    ? 'bg-amber-100 text-amber-700'
-                    : 'bg-green-100 text-green-700';
+                  : 'bg-green-100 text-green-700';
+
+              const joursAvantSevrage = Math.max(0, 35 - age);
 
               return (
                 <div key={portee.id}
@@ -386,7 +386,7 @@ export default function NaissancesPage() {
                       </div>
                     )}
 
-                    {/* Barre progression âge */}
+                    {/* Barre progression âge + compte à rebours */}
                     {!estSevree && (
                       <div>
                         <div className="flex justify-between text-[10px] text-gray-400 mb-1">
@@ -394,19 +394,21 @@ export default function NaissancesPage() {
                           <span className="font-semibold text-gray-600">{age}j / 35j</span>
                           <span>35j</span>
                         </div>
-                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
                           <div
-                            className={`h-full rounded-full transition-all ${age >= 35 ? 'bg-green-500' : age >= 21 ? 'bg-amber-400' : 'bg-red-400'}`}
+                            className={`h-full rounded-full transition-all ${age >= 35 ? 'bg-green-500' : 'bg-red-400'}`}
                             style={{ width: `${Math.min(100, Math.round((age / 35) * 100))}%` }}
                           />
                         </div>
-                        <p className="text-[10px] text-gray-400 mt-1 text-center">
-                          {age < 21
-                            ? `Trop jeune — encore ${21 - age}j minimum`
-                            : age < 35
-                              ? `Sevrage possible dans ${35 - age}j`
-                              : '✅ Prêt à sevrer'}
-                        </p>
+                        {age < 35 ? (
+                          <div className="mt-2 bg-red-50 border border-red-100 rounded-xl px-3 py-2 text-center">
+                            <p className="text-[10px] text-red-500 font-medium">🔒 Sevrage verrouillé</p>
+                            <p className="text-lg font-black text-red-700 leading-tight">{joursAvantSevrage}j</p>
+                            <p className="text-[10px] text-red-400">avant le sevrage autorisé</p>
+                          </div>
+                        ) : (
+                          <p className="text-[10px] text-green-600 font-bold mt-1 text-center">✅ Âge minimal atteint — sevrage possible</p>
+                        )}
                       </div>
                     )}
                   </div>
@@ -439,22 +441,13 @@ export default function NaissancesPage() {
                     </div>
                   )}
 
-                  {/* Bouton Sevrer */}
-                  {!estSevree && !confirmer && (
+                  {/* Bouton Sevrer — n'apparaît QUE à partir de 35 jours */}
+                  {!estSevree && !confirmer && age >= 35 && (
                     <div className="px-3 pb-3">
                       <button
                         onClick={() => setSevrageEnCours(portee.id)}
-                        disabled={age < 21}
-                        className={`w-full py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${
-                          age >= 35
-                            ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm'
-                            : age >= 21
-                              ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-                              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        }`}>
-                        {age < 21
-                          ? `✂️ Trop tôt — ${21 - age}j restants`
-                          : '✂️ Sevrer la portée'}
+                        className="w-full py-3 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 active:scale-95 transition-all shadow-sm">
+                        ✂️ Sevrer la portée
                       </button>
                     </div>
                   )}
