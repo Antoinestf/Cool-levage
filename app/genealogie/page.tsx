@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from 'react';
 
 interface Lapin {
@@ -25,9 +25,11 @@ export default function ArbreGenealogique() {
       const tatouageUrl = urlParams.get('tatouage');
       if (tatouageUrl) {
         const matched = parsed.find(l => l.tatouage === tatouageUrl);
-        if (matched) { setSelectedId(matched.id); return; }
+        if (matched) setSelectedId(matched.id);
+        else if (parsed.length > 0) setSelectedId(parsed[0].id);
+      } else if (parsed.length > 0) {
+        setSelectedId(parsed[0].id);
       }
-      if (parsed.length > 0) setSelectedId(parsed[0].id);
     }
     setIsLoaded(true);
   }, []);
@@ -155,7 +157,7 @@ export default function ArbreGenealogique() {
           <div className="mt-1.5 flex gap-1 w-full">
             <button
               onClick={e => { e.stopPropagation(); setSelectedId(lapin.id); }}
-              className="flex-1 text-[9px] md:text-[10px] bg-white/80 border border-gray-300 py-1 rounded-lg font-bold text-gray-600 hover:bg-gray-50 active:scale-95"
+              className="flex-1 text-[9px] md:text-[10px] bg-white/80 border border-gray-300 py-1 rounded-lg font-bold text-gray-600 hover:bg-gray-50 active:opacity-75"
               title="Centrer l'arbre ici"
             >
               <span className="md:hidden">⬆️</span>
@@ -164,7 +166,7 @@ export default function ArbreGenealogique() {
             {possedeEnfants && (
               <button
                 onClick={e => { e.stopPropagation(); pivoterVersEnfant(lapin.tatouage); }}
-                className={`flex-1 text-[9px] md:text-[10px] border py-1 rounded-lg font-bold active:scale-95 ${estCible ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-white/80 border-indigo-200 text-indigo-600 hover:bg-indigo-50'}`}
+                className={`flex-1 text-[9px] md:text-[10px] border py-1 rounded-lg font-bold active:opacity-75 ${estCible ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-white/80 border-indigo-200 text-indigo-600 hover:bg-indigo-50'}`}
                 title="Descendre vers un enfant"
               >
                 <span className="md:hidden">👶</span>
@@ -180,8 +182,18 @@ export default function ArbreGenealogique() {
   return (
     <div className="p-3 md:p-6 bg-gray-50 min-h-screen">
 
+      {/* ── Print CSS — pedigree propre ──────────────────────────────────────── */}
+      <style>{`
+        @media print {
+          aside, nav, .no-print { display: none !important; }
+          main { padding: 0 !important; overflow: visible !important; height: auto !important; }
+          body { background: white !important; }
+          .pedigree-print { box-shadow: none !important; border: 1px solid #ccc !important; }
+        }
+      `}</style>
+
       {/* ── En-tête compact ──────────────────────────────────────────────────── */}
-      <div className="bg-white px-4 py-3 md:p-5 rounded-2xl border border-gray-200 shadow-sm mb-4 flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="no-print bg-white px-4 py-3 md:p-5 rounded-2xl border border-gray-200 shadow-sm mb-4 flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex-1 min-w-0">
           <h1 className="text-lg md:text-2xl font-bold text-gray-900 leading-tight">🌳 Généalogie</h1>
           <p className="text-gray-400 text-[11px] md:text-sm mt-0.5 truncate">Naviguez avec ⬆️ Centrer et 👶 Enfant pour explorer.</p>
@@ -195,11 +207,33 @@ export default function ArbreGenealogique() {
           >
             {cheptel.map(l => <option key={l.id} value={l.id}>{l.tatouage} {l.sexe === 'M' ? '♂' : '♀'}</option>)}
           </select>
+          {cible && (
+            <button
+              onClick={() => window.print()}
+              className="no-print bg-indigo-600 text-white font-bold text-xs px-3 py-2 rounded-xl hover:bg-indigo-700 active:opacity-75 transition-colors shrink-0"
+              title="Imprimer le pedigree">
+              🖨️ Pedigree
+            </button>
+          )}
         </div>
       </div>
 
+      {/* ── En-tête pedigree (visible uniquement à l'impression) ─────────────── */}
+      {cible && (
+        <div className="hidden print:block mb-6 border-b-2 border-gray-900 pb-4">
+          <p className="text-[10px] uppercase tracking-widest font-bold text-gray-500">Pedigree officiel</p>
+          <h1 className="text-2xl font-extrabold text-gray-900 uppercase tracking-wide">
+            {cible.tatouage} {cible.sexe === 'M' ? '♂' : '♀'}
+          </h1>
+          {cible.race && <p className="text-sm font-semibold text-gray-700">{cible.race}</p>}
+          <p className="text-xs text-gray-400 mt-1">
+            Généré le {new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })} · Coolélevage
+          </p>
+        </div>
+      )}
+
       {/* ── Diagnostic consanguinité ─────────────────────────────────────────── */}
-      <div className={`px-4 py-3 md:p-5 rounded-2xl border mb-4 shadow-sm flex items-center gap-3 ${diagnostic.style}`}>
+      <div className={`no-print px-4 py-3 md:p-5 rounded-2xl border mb-4 shadow-sm flex items-center gap-3 ${diagnostic.style}`}>
         <div className="flex-1 min-w-0">
           <p className="text-[10px] uppercase tracking-widest font-bold opacity-60 mb-0.5">Analyse consanguinité</p>
           <p className="text-sm font-semibold leading-snug">{diagnostic.msg}</p>
@@ -212,7 +246,7 @@ export default function ArbreGenealogique() {
 
       {/* ── Arbre généalogique ───────────────────────────────────────────────── */}
       {cheptel.length > 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-200 p-3 md:p-8 shadow-sm flex flex-col gap-3 md:gap-6 max-w-4xl mx-auto">
+        <div className="pedigree-print bg-white rounded-2xl border border-gray-200 p-3 md:p-8 shadow-sm flex flex-col gap-3 md:gap-6 max-w-4xl mx-auto">
 
           {/* Grands-parents */}
           <div>

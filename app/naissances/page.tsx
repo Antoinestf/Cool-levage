@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from 'react';
 
@@ -19,6 +19,8 @@ interface LapinCheptelMin {
   id: string;
   tatouage: string;
   sexe: 'M' | 'F';
+  pere?: string;
+  mere?: string;
 }
 
 interface Saillie {
@@ -73,6 +75,58 @@ function ageJours(dateNaissance: string): number {
   const auj = new Date(); auj.setHours(0, 0, 0, 0);
   const nais = new Date(dateNaissance); nais.setHours(0, 0, 0, 0);
   return Math.round((auj.getTime() - nais.getTime()) / 86400000);
+}
+
+// ── Analyse de consanguinité avant saillie ────────────────────────────────────
+type NiveauConsang = 'danger' | 'warning' | 'ok' | null;
+interface AlerteConsang {
+  niveau: Exclude<NiveauConsang, null>;
+  taux: string;
+  msg: string;
+}
+
+function verifierConsanguinite(
+  male: LapinCheptelMin | undefined,
+  femelle: LapinCheptelMin | undefined,
+  tous: LapinCheptelMin[]
+): AlerteConsang | null {
+  if (!male || !femelle) return null;
+
+  const trouver = (t?: string) => t ? tous.find(l => l.tatouage === t) : undefined;
+
+  const gpp = trouver(male.pere);
+  const gmp = trouver(male.mere);
+  const gpm = trouver(femelle.pere);
+  const gmm = trouver(femelle.mere);
+
+  // Parent ↔ Enfant direct
+  if (male.tatouage === femelle.pere || male.tatouage === femelle.mere ||
+      femelle.tatouage === male.pere  || femelle.tatouage === male.mere) {
+    return { niveau: 'danger', taux: '25%', msg: 'Accouplement Parent / Enfant — tares génétiques certaines. Ne pas procéder.' };
+  }
+
+  // Frère et Sœur (un même grand-parent en commun côté père OU côté mère)
+  const memeGP = (gpp && gpm && gpp.tatouage === gpm.tatouage) ||
+                 (gmp && gmm && gmp.tatouage === gmm.tatouage);
+  if (memeGP) {
+    return { niveau: 'danger', taux: '25%', msg: 'Frère et Sœur — consanguinité à 25%. Accouplement à proscrire absolument.' };
+  }
+
+  // Cousins germains (grand-parent en commun entre les deux lignées)
+  const gpMale = [gpp?.tatouage, gmp?.tatouage].filter(Boolean) as string[];
+  const gpFem  = [gpm?.tatouage, gmm?.tatouage].filter(Boolean) as string[];
+  if (gpMale.some(gp => gpFem.includes(gp))) {
+    return { niveau: 'warning', taux: '6 – 12%', msg: 'Cousins germains — grands-parents en commun. À éviter si possible.' };
+  }
+
+  // Données généalogiques présentes mais aucun lien → sécurité confirmée
+  const aDesParents = male.pere || male.mere || femelle.pere || femelle.mere;
+  if (aDesParents) {
+    return { niveau: 'ok', taux: '0%', msg: 'Aucune consanguinité détectée sur 2 générations.' };
+  }
+
+  // Pas assez de données généalogiques renseignées
+  return null;
 }
 
 const STATUT_STYLE: Record<Saillie['statut'], { bg: string; badge: string; icone: string; border: string }> = {
@@ -262,7 +316,7 @@ export default function NaissancesPage() {
         </div>
         <button
           onClick={() => setFormOpen(o => !o)}
-          className="bg-indigo-600 text-white font-bold text-sm px-4 py-2.5 rounded-xl shadow hover:bg-indigo-700 active:scale-95 transition-all shrink-0">
+          className="bg-indigo-600 text-white font-bold text-sm px-4 py-2.5 rounded-xl shadow hover:bg-indigo-700 active:opacity-75 transition-colors shrink-0">
           {formOpen ? '✕ Fermer' : '＋ Saillie'}
         </button>
       </div>
@@ -299,8 +353,39 @@ export default function NaissancesPage() {
                 required />
             </div>
           </div>
+          {/* ── Alerte consanguinité ── */}
+          {(() => {
+            const alerte = verifierConsanguinite(
+              males.find(m => m.id === form.idMale),
+              femelles.find(f => f.id === form.idFemelle),
+              cheptel
+            );
+            if (!alerte) return null;
+            return (
+              <div className={`mb-4 px-4 py-3 rounded-xl border flex items-start gap-3 ${
+                alerte.niveau === 'danger'  ? 'bg-red-50 border-red-300'   :
+                alerte.niveau === 'warning' ? 'bg-amber-50 border-amber-300' :
+                'bg-green-50 border-green-300'
+              }`}>
+                <span className="text-2xl shrink-0">{alerte.niveau === 'danger' ? '🚨' : alerte.niveau === 'warning' ? '⚠️' : '✅'}</span>
+                <div>
+                  <p className={`text-sm font-extrabold ${
+                    alerte.niveau === 'danger'  ? 'text-red-900'   :
+                    alerte.niveau === 'warning' ? 'text-amber-900' :
+                    'text-green-900'
+                  }`}>{alerte.msg}</p>
+                  <p className={`text-xs mt-0.5 font-medium ${
+                    alerte.niveau === 'danger'  ? 'text-red-600'   :
+                    alerte.niveau === 'warning' ? 'text-amber-600' :
+                    'text-green-600'
+                  }`}>Taux de consanguinité estimé : <strong>{alerte.taux}</strong></p>
+                </div>
+              </div>
+            );
+          })()}
+
           <button type="submit"
-            className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 active:scale-95 transition-all text-sm">
+            className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 active:opacity-75 transition-colors text-sm">
             ✅ Calculer les dates & Enregistrer
           </button>
         </form>
@@ -396,7 +481,7 @@ export default function NaissancesPage() {
                         </div>
                         <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
                           <div
-                            className={`h-full rounded-full transition-all ${age >= 35 ? 'bg-green-500' : 'bg-red-400'}`}
+                            className={`h-full rounded-full transition-colors ${age >= 35 ? 'bg-green-500' : 'bg-red-400'}`}
                             style={{ width: `${Math.min(100, Math.round((age / 35) * 100))}%` }}
                           />
                         </div>
@@ -429,12 +514,12 @@ export default function NaissancesPage() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => setSevrageEnCours(null)}
-                          className="flex-1 py-2.5 rounded-xl border border-emerald-200 text-emerald-700 font-bold text-sm bg-white hover:bg-emerald-50 active:scale-95 transition-all">
+                          className="flex-1 py-2.5 rounded-xl border border-emerald-200 text-emerald-700 font-bold text-sm bg-white hover:bg-emerald-50 active:opacity-75 transition-colors">
                           Annuler
                         </button>
                         <button
                           onClick={() => severPortee(portee)}
-                          className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 active:scale-95 transition-all">
+                          className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 active:opacity-75 transition-colors">
                           ✅ Sevrer & créer les lapins
                         </button>
                       </div>
@@ -446,7 +531,7 @@ export default function NaissancesPage() {
                     <div className="px-3 pb-3">
                       <button
                         onClick={() => setSevrageEnCours(portee.id)}
-                        className="w-full py-3 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 active:scale-95 transition-all shadow-sm">
+                        className="w-full py-3 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 active:opacity-75 transition-colors shadow-sm">
                         ✂️ Sevrer la portée
                       </button>
                     </div>
@@ -571,12 +656,12 @@ export default function NaissancesPage() {
                     )}
                     <div className="flex gap-2">
                       <button onClick={() => annulerLapereaux(saillie.id)}
-                        className="flex-1 py-2.5 rounded-xl border border-blue-200 text-blue-600 font-bold text-sm bg-white hover:bg-blue-50 active:scale-95 transition-all">
+                        className="flex-1 py-2.5 rounded-xl border border-blue-200 text-blue-600 font-bold text-sm bg-white hover:bg-blue-50 active:opacity-75 transition-colors">
                         Annuler
                       </button>
                       <button onClick={() => confirmerLapereaux(saillie.id)}
                         disabled={!nbNesTemp || parseInt(nbNesTemp) < 0}
-                        className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-40">
+                        className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 active:opacity-75 transition-colors disabled:opacity-40">
                         ✅ Confirmer
                       </button>
                     </div>

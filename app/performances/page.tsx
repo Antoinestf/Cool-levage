@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
@@ -25,6 +25,15 @@ interface Saillie {
   tatouageFemelle: string;
   statut: string;
   dateSaillie: string;
+}
+
+interface Portee {
+  idSaillie: string;
+  tatouageMere: string;
+  dateNaissance: string;
+  nbVivants: number;
+  nbMorts: number;
+  statut: 'Allaitement' | 'Sevrée';
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -77,7 +86,7 @@ function MiniGraphe({ pesees }: { pesees: Pesee[] }) {
             <div key={i} className="flex flex-col items-center flex-1 h-full justify-end gap-0.5">
               <span className="text-[8px] text-gray-400 leading-none">{Math.round(p.poids / 100) / 10}kg</span>
               <div
-                className="w-full rounded-t bg-indigo-400 transition-all"
+                className="w-full rounded-t bg-indigo-400 transition-colors"
                 style={{ height: `${hPct}%` }}
               />
             </div>
@@ -100,6 +109,7 @@ function PerformancesInner() {
   const [cheptel, setCheptel]       = useState<Lapin[]>([]);
   const [pesees, setPesees]         = useState<Pesee[]>([]);
   const [saillies, setSaillies]     = useState<Saillie[]>([]);
+  const [portees, setPortees]       = useState<Portee[]>([]);
 
   // Formulaire pesée
   const [lapinSelId, setLapinSelId] = useState(lapinIdParam || '');
@@ -107,8 +117,7 @@ function PerformancesInner() {
   const [datePesee, setDatePesee]   = useState(new Date().toISOString().split('T')[0]);
   const [confirm, setConfirm]       = useState(false);
 
-  // Onglet actif — si on arrive avec ?lapin=, on ouvre directement l'onglet peser
-  const [onglet, setOnglet]         = useState<'peser' | 'suivi' | 'prolificite'>(lapinIdParam ? 'peser' : 'peser');
+  const [onglet, setOnglet] = useState<'peser' | 'suivi' | 'prolificite' | 'classement'>(lapinIdParam ? 'peser' : 'peser');
 
   // Détail lapin ouvert
   const [lapinOuvert, setLapinOuvert] = useState<string | null>(null);
@@ -117,9 +126,11 @@ function PerformancesInner() {
     const c = localStorage.getItem('ferme_cheptel');
     const p = localStorage.getItem('ferme_pesees');
     const s = localStorage.getItem('ferme_reproduction');
+    const n = localStorage.getItem('ferme_naissances');
     if (c) setCheptel(JSON.parse(c));
     if (p) setPesees(JSON.parse(p));
     if (s) setSaillies(JSON.parse(s));
+    if (n) setPortees(JSON.parse(n));
     setIsLoaded(true);
   }, []);
 
@@ -198,13 +209,14 @@ function PerformancesInner() {
       {/* ── Onglets ───────────────────────────────────────────────────────────── */}
       <div className="flex bg-white rounded-2xl border border-gray-200 p-1 mb-5 gap-1">
         {([
-          { key: 'peser',       label: '⚖️ Peser',        desc: 'Enregistrer' },
-          { key: 'suivi',       label: '📊 Suivi GMQ',    desc: 'Performances' },
-          { key: 'prolificite', label: '🐣 Prolificité',  desc: 'Femelles' },
+          { key: 'peser',       label: '⚖️ Peser'    },
+          { key: 'suivi',       label: '📊 GMQ'      },
+          { key: 'prolificite', label: '🐣 Prolif.'  },
+          { key: 'classement',  label: '🏆 Classmt.' },
         ] as const).map(({ key, label }) => (
           <button key={key}
             onClick={() => setOnglet(key)}
-            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${onglet === key ? 'bg-indigo-600 text-white shadow' : 'text-gray-500 hover:bg-gray-50'}`}>
+            className={`flex-1 py-2 rounded-xl text-[11px] font-bold transition-colors active:opacity-75 ${onglet === key ? 'bg-indigo-600 text-white shadow' : 'text-gray-500 hover:bg-gray-50'}`}>
             {label}
           </button>
         ))}
@@ -237,7 +249,7 @@ function PerformancesInner() {
                   return (
                     <button key={l.id}
                       onClick={() => setLapinSelId(selectionne ? '' : l.id)}
-                      className={`rounded-xl border-2 p-3 text-left transition-all active:scale-95 ${
+                      className={`rounded-xl border-2 p-3 text-left transition-colors active:opacity-75 ${
                         selectionne
                           ? 'border-indigo-500 bg-indigo-50'
                           : estMale
@@ -319,7 +331,7 @@ function PerformancesInner() {
               <button
                 onClick={ajouterPesee}
                 disabled={!poids || parseInt(poids) < 100}
-                className={`w-full py-3.5 rounded-xl font-bold text-base transition-all active:scale-95 ${
+                className={`w-full py-3.5 rounded-xl font-bold text-base transition-colors active:opacity-75 ${
                   confirm
                     ? 'bg-green-500 text-white'
                     : !poids || parseInt(poids) < 100
@@ -447,7 +459,7 @@ function PerformancesInner() {
                         )}
                         <button
                           onClick={() => { setOnglet('peser'); setLapinSelId(l.id); }}
-                          className="mt-3 w-full py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold text-xs rounded-xl active:scale-95">
+                          className="mt-3 w-full py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold text-xs rounded-xl active:opacity-75">
                           ⚖️ Ajouter une pesée pour {l.tatouage}
                         </button>
                       </div>
@@ -459,6 +471,159 @@ function PerformancesInner() {
           )}
         </div>
       )}
+
+      {/* ══════════════════════════════════════════════════════════════════════ */}
+      {/* ONGLET 4 — CLASSEMENT DES REPRODUCTRICES                             */}
+      {/* ══════════════════════════════════════════════════════════════════════ */}
+      {onglet === 'classement' && (() => {
+        const femelles4 = cheptel.filter(l => l.sexe === 'F');
+
+        if (femelles4.length === 0) return (
+          <div className="bg-white rounded-2xl border p-8 text-center text-gray-400">
+            <p className="text-4xl mb-2">🐰</p>
+            <p>Aucune femelle dans le cheptel</p>
+          </div>
+        );
+
+        // ── Calcul du score par femelle ──────────────────────────────────────
+        const classement = femelles4.map(f => {
+          const sesPortees = portees.filter(p => p.tatouageMere === f.tatouage);
+          const nbPortees  = sesPortees.length;
+          const totalVivants = sesPortees.reduce((s, p) => s + p.nbVivants, 0);
+          const totalNes     = sesPortees.reduce((s, p) => s + p.nbVivants + p.nbMorts, 0);
+          const totalMorts   = totalNes - totalVivants;
+
+          // Durée d'activité depuis la 1ère portée
+          const datesNaiss = sesPortees.map(p => new Date(p.dateNaissance).getTime()).filter(Boolean);
+          const premiereNaiss = datesNaiss.length ? Math.min(...datesNaiss) : null;
+          const joursActivite = premiereNaiss ? Math.round((Date.now() - premiereNaiss) / 86400000) : 0;
+
+          const vivantsParPortee  = nbPortees > 0 ? totalVivants / nbPortees : 0;
+          const tauxMortalite     = totalNes > 0 ? Math.round((totalMorts / totalNes) * 100) : 0;
+          const vivantsParAn      = joursActivite >= 30
+            ? Math.round((totalVivants / joursActivite) * 365)
+            : null;
+
+          // Score = vivants/portée × (1 - mortalité) — entre 0 et ~10
+          const score = vivantsParPortee * (1 - tauxMortalite / 100);
+
+          return {
+            lapin: f, nbPortees, totalVivants, totalMorts, totalNes,
+            vivantsParPortee: Math.round(vivantsParPortee * 10) / 10,
+            tauxMortalite, vivantsParAn, score, joursActivite,
+          };
+        }).sort((a, b) => b.score - a.score);
+
+        return (
+          <div className="space-y-3">
+
+            {/* Légende */}
+            <div className="flex gap-2 flex-wrap text-[10px] font-bold">
+              <span className="bg-green-100 text-green-800 border border-green-200 rounded-full px-2 py-0.5">✅ Conserver score ≥ 6</span>
+              <span className="bg-amber-100 text-amber-800 border border-amber-200 rounded-full px-2 py-0.5">⚠️ Surveiller 3–6</span>
+              <span className="bg-red-100 text-red-800 border border-red-200 rounded-full px-2 py-0.5">❌ Réformer {'<'} 3</span>
+            </div>
+
+            {classement.map(({ lapin, nbPortees, totalVivants, totalMorts, totalNes, vivantsParPortee, tauxMortalite, vivantsParAn, score, joursActivite }, i) => {
+              const medaille = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
+              const pasAssezDonnees = nbPortees === 0;
+
+              const decision = pasAssezDonnees
+                ? { label: '⏳ Pas encore de données', style: 'bg-gray-100 text-gray-500 border-gray-200' }
+                : score >= 6
+                  ? { label: '✅ Conserver — Excellente', style: 'bg-green-100 text-green-800 border-green-200' }
+                  : score >= 3
+                    ? { label: '⚠️ Surveiller — Correcte', style: 'bg-amber-100 text-amber-800 border-amber-200' }
+                    : { label: '❌ Réformer — Faible', style: 'bg-red-100 text-red-800 border-red-200' };
+
+              const scoreMax = 10;
+              const scorePct = Math.min(100, Math.round((score / scoreMax) * 100));
+
+              return (
+                <div key={lapin.id} className={`bg-white rounded-2xl border shadow-sm overflow-hidden ${
+                  pasAssezDonnees ? 'border-gray-200' :
+                  score >= 6 ? 'border-green-200' :
+                  score >= 3 ? 'border-amber-200' : 'border-red-200'
+                }`}>
+
+                  {/* En-tête carte */}
+                  <div className={`px-4 py-3 flex items-center justify-between gap-2 ${
+                    pasAssezDonnees ? 'bg-gray-50' :
+                    score >= 6 ? 'bg-green-50' :
+                    score >= 3 ? 'bg-amber-50' : 'bg-red-50'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl font-black">{medaille}</span>
+                      <div>
+                        <p className="font-extrabold text-gray-900 uppercase">{lapin.tatouage} <span className="text-rose-500 text-xs">♀</span></p>
+                        <p className="text-[10px] text-gray-400">{lapin.race || 'Race inconnue'}</p>
+                      </div>
+                    </div>
+                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border shrink-0 ${decision.style}`}>
+                      {decision.label}
+                    </span>
+                  </div>
+
+                  <div className="px-4 py-3 space-y-3">
+
+                    {pasAssezDonnees ? (
+                      <p className="text-xs text-gray-400 italic text-center py-2">
+                        Aucune portée enregistrée — le classement se mettra à jour après la première mise-bas.
+                      </p>
+                    ) : (
+                      <>
+                        {/* Chiffres clés */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          <div className="bg-gray-50 rounded-xl p-2.5 text-center border border-gray-100">
+                            <p className="text-[10px] text-gray-400 font-medium">Portées</p>
+                            <p className="text-xl font-black text-gray-900">{nbPortees}</p>
+                          </div>
+                          <div className="bg-green-50 rounded-xl p-2.5 text-center border border-green-100">
+                            <p className="text-[10px] text-gray-400 font-medium">Vivants/portée</p>
+                            <p className="text-xl font-black text-green-700">{vivantsParPortee}</p>
+                          </div>
+                          <div className={`rounded-xl p-2.5 text-center border ${tauxMortalite >= 30 ? 'bg-red-50 border-red-100' : tauxMortalite >= 15 ? 'bg-amber-50 border-amber-100' : 'bg-green-50 border-green-100'}`}>
+                            <p className="text-[10px] text-gray-400 font-medium">Mortalité</p>
+                            <p className={`text-xl font-black ${tauxMortalite >= 30 ? 'text-red-600' : tauxMortalite >= 15 ? 'text-amber-600' : 'text-green-700'}`}>{tauxMortalite}%</p>
+                          </div>
+                          <div className="bg-indigo-50 rounded-xl p-2.5 text-center border border-indigo-100">
+                            <p className="text-[10px] text-gray-400 font-medium">Vivants/an</p>
+                            <p className="text-xl font-black text-indigo-700">
+                              {vivantsParAn !== null ? vivantsParAn : <span className="text-sm text-gray-400">{'<'}30j</span>}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Détail textuel */}
+                        <div className="text-[11px] text-gray-500 bg-gray-50 rounded-xl px-3 py-2 flex flex-wrap gap-x-4 gap-y-1">
+                          <span>📦 {totalNes} nés au total</span>
+                          <span>💚 {totalVivants} vivants</span>
+                          {totalMorts > 0 && <span>💔 {totalMorts} mort-nés</span>}
+                          {joursActivite > 0 && <span>📅 {Math.round(joursActivite / 30)} mois d'activité</span>}
+                        </div>
+
+                        {/* Barre de score */}
+                        <div>
+                          <div className="flex justify-between text-[10px] text-gray-400 mb-1">
+                            <span>Score global</span>
+                            <span className="font-bold text-gray-600">{Math.round(score * 10) / 10} / 10</span>
+                          </div>
+                          <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-colors ${score >= 6 ? 'bg-green-500' : score >= 3 ? 'bg-amber-400' : 'bg-red-500'}`}
+                              style={{ width: `${scorePct}%` }}
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {/* ONGLET 3 — PROLIFICITÉ                                                */}
@@ -518,7 +683,7 @@ function PerformancesInner() {
                     <div className="mt-3">
                       <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                         <div
-                          className={`h-full rounded-full transition-all ${taux >= 70 ? 'bg-green-500' : taux >= 40 ? 'bg-yellow-400' : 'bg-red-500'}`}
+                          className={`h-full rounded-full transition-colors ${taux >= 70 ? 'bg-green-500' : taux >= 40 ? 'bg-yellow-400' : 'bg-red-500'}`}
                           style={{ width: `${taux}%` }}
                         />
                       </div>

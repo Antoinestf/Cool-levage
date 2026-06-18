@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from 'react';
 
@@ -152,7 +152,7 @@ export default function ExportPage() {
               </div>
               <button
                 onClick={() => window.print()}
-                className="bg-indigo-600 text-white font-bold text-sm px-4 py-2.5 rounded-xl hover:bg-indigo-700 active:scale-95 transition-all shrink-0 shadow-sm">
+                className="bg-indigo-600 text-white font-bold text-sm px-4 py-2.5 rounded-xl hover:bg-indigo-700 active:opacity-75 transition-colors shrink-0 shadow-sm">
                 🖨️ PDF / Imprimer
               </button>
             </div>
@@ -341,7 +341,7 @@ export default function ExportPage() {
                 <button
                   onClick={exporterCheptel}
                   disabled={cheptel.length === 0}
-                  className="shrink-0 bg-zinc-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl hover:bg-zinc-700 active:scale-95 transition-all disabled:opacity-40">
+                  className="shrink-0 bg-zinc-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl hover:bg-zinc-700 active:opacity-75 transition-colors disabled:opacity-40">
                   ⬇️ CSV
                 </button>
               </div>
@@ -357,7 +357,7 @@ export default function ExportPage() {
                 <button
                   onClick={exporterReproduction}
                   disabled={saillies.length === 0}
-                  className="shrink-0 bg-zinc-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl hover:bg-zinc-700 active:scale-95 transition-all disabled:opacity-40">
+                  className="shrink-0 bg-zinc-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl hover:bg-zinc-700 active:opacity-75 transition-colors disabled:opacity-40">
                   ⬇️ CSV
                 </button>
               </div>

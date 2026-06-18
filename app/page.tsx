@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import MeteoWidget from '@/components/MeteoWidget';
@@ -152,7 +152,7 @@ function NotifWidget() {
         </button>
       ) : (
         <button onClick={activer}
-          className="w-full py-2 text-xs font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 active:scale-95 transition-all">
+          className="w-full py-2 text-xs font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 active:opacity-75 transition-colors">
           🔔 Activer les rappels
         </button>
       )}
@@ -440,7 +440,7 @@ export default function TableauDeBord() {
                       </div>
                       <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
                         <div
-                          className={`h-full rounded-full transition-all ${critique ? 'bg-red-400' : 'bg-emerald-400'}`}
+                          className={`h-full rounded-full transition-colors ${critique ? 'bg-red-400' : 'bg-emerald-400'}`}
                           style={{ width: `${pct}%` }}
                         />
                       </div>

@@ -1,7 +1,11 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+
+// Chargement dynamique pour éviter les erreurs SSR (qrcode.react utilise le canvas)
+const QrCodeLapin = dynamic(() => import('@/components/QrCodeLapin'), { ssr: false });
 
 declare global {
   interface Window {
@@ -17,8 +21,11 @@ interface Lapin {
   statut: 'Reproducteur' | 'Engraissement' | 'Jeune' | 'Vente';
   dateNaissance: string;
   race: string;
-  pere?: string;
-  mere?: string;
+  pere?: string;    // tatouage du père (ancien modèle)
+  mere?: string;    // tatouage de la mère (ancien modèle)
+  pereId?: string;  // ID du père (nouveau modèle — pour ArbreGeneralogique)
+  mereId?: string;  // ID de la mère (nouveau modèle)
+  caracteristiques?: string; // description libre, ex: "Femelle Papillon"
   soins?: { date: string; type: string; note: string }[];
 }
 
@@ -37,6 +44,7 @@ export default function CheptelPage() {
   const [showCareList, setShowCareList] = useState<Record<string, boolean>>({});
   const [newCare, setNewCare]       = useState({ date: '', type: '', note: '' });
   const [formOpen, setFormOpen]     = useState(false);
+  const [qrLapinId, setQrLapinId]  = useState<string | null>(null);
 
   useEffect(() => {
     const data = localStorage.getItem('ferme_cheptel');
@@ -133,6 +141,36 @@ export default function CheptelPage() {
   return (
     <div className="p-4 md:p-6 bg-gray-50 min-h-screen">
 
+      {/* ── Modale QR Code ────────────────────────────────────────────────── */}
+      {qrLapinId && (() => {
+        const l = cheptel.find(lap => lap.id === qrLapinId);
+        if (!l) return null;
+        return (
+          <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
+            onClick={() => setQrLapinId(null)}>
+            <div className="bg-white rounded-2xl shadow-md w-full max-w-xs"
+              onClick={e => e.stopPropagation()}>
+              <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                <p className="font-bold text-gray-800 text-sm">📱 QR Code — {l.tatouage}</p>
+                <button onClick={() => setQrLapinId(null)}
+                  className="text-gray-400 hover:text-gray-700 text-lg font-bold">✕</button>
+              </div>
+              <div className="p-5 flex flex-col items-center gap-3">
+                <QrCodeLapin lapin={l} taille={200} />
+                <p className="text-[11px] text-gray-400 text-center">
+                  Imprimez et collez ce QR sur la cage.<br/>
+                  Scannez pour ouvrir la fiche directement.
+                </p>
+                <Link href={`/lapin/${l.id}`}
+                  className="w-full text-center py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 active:opacity-75 transition-colors">
+                  Voir la fiche complète →
+                </Link>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── En-tête ─────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-5 gap-3">
         <div>
@@ -141,7 +179,7 @@ export default function CheptelPage() {
         </div>
         <button
           onClick={() => setFormOpen(o => !o)}
-          className="bg-indigo-600 text-white font-bold text-sm px-4 py-2.5 rounded-xl shadow hover:bg-indigo-700 active:scale-95 transition-all shrink-0"
+          className="bg-indigo-600 text-white font-bold text-sm px-4 py-2.5 rounded-xl shadow hover:bg-indigo-700 active:opacity-75 transition-colors shrink-0"
         >
           {formOpen ? '✕ Fermer' : '＋ Ajouter'}
         </button>
@@ -212,11 +250,11 @@ export default function CheptelPage() {
 
           <div className="flex gap-2 pt-2">
             <button type="submit"
-              className="flex-1 bg-indigo-600 text-white font-bold py-2.5 rounded-xl text-sm hover:bg-indigo-700 active:scale-95 transition-all">
+              className="flex-1 bg-indigo-600 text-white font-bold py-2.5 rounded-xl text-sm hover:bg-indigo-700 active:opacity-75 transition-colors">
               ✅ Enregistrer
             </button>
             <button type="button" onClick={toggleDictee}
-              className={`px-4 py-2.5 rounded-xl font-bold text-sm text-white transition-all ${isListening ? 'bg-red-500 animate-pulse' : 'bg-zinc-700 hover:bg-zinc-800'}`}>
+              className={`px-4 py-2.5 rounded-xl font-bold text-sm text-white transition-colors ${isListening ? 'bg-red-500 animate-pulse' : 'bg-zinc-700 hover:bg-zinc-800'}`}>
               {isListening ? '⏹️' : '🎤'}
             </button>
           </div>
@@ -282,29 +320,34 @@ export default function CheptelPage() {
                 </div>
 
                 {/* Boutons action */}
-                <div className="px-3 pb-3 grid grid-cols-5 gap-1.5">
+                <div className="px-3 pb-3 grid grid-cols-6 gap-1">
                   <Link href={`/genealogie?tatouage=${lapin.tatouage}`}
-                    className="flex flex-col items-center justify-center gap-1 py-2.5 bg-emerald-600 text-white rounded-xl active:scale-95 transition-all text-center">
+                    className="flex flex-col items-center justify-center gap-1 py-2.5 bg-emerald-600 text-white rounded-xl active:opacity-75 transition-colors text-center">
                     <span className="text-base leading-none">🌳</span>
                     <span className="text-[9px] font-bold leading-none">Généal.</span>
                   </Link>
+                  <button onClick={() => setQrLapinId(lapin.id)}
+                    className="flex flex-col items-center justify-center gap-1 py-2.5 bg-zinc-700 text-white rounded-xl active:opacity-75 transition-colors">
+                    <span className="text-base leading-none">📱</span>
+                    <span className="text-[9px] font-bold leading-none">QR</span>
+                  </button>
                   <Link href={`/performances?lapin=${lapin.id}`}
-                    className="flex flex-col items-center justify-center gap-1 py-2.5 bg-orange-500 text-white rounded-xl active:scale-95 transition-all text-center">
+                    className="flex flex-col items-center justify-center gap-1 py-2.5 bg-orange-500 text-white rounded-xl active:opacity-75 transition-colors text-center">
                     <span className="text-base leading-none">⚖️</span>
                     <span className="text-[9px] font-bold leading-none">Peser</span>
                   </Link>
                   <button onClick={() => setShowCareForm(p => ({ ...p, [lapin.id]: !p[lapin.id] }))}
-                    className="flex flex-col items-center justify-center gap-1 py-2.5 bg-indigo-600 text-white rounded-xl active:scale-95 transition-all">
+                    className="flex flex-col items-center justify-center gap-1 py-2.5 bg-indigo-600 text-white rounded-xl active:opacity-75 transition-colors">
                     <span className="text-base leading-none">{showCareForm[lapin.id] ? '✕' : '+'}</span>
                     <span className="text-[9px] font-bold leading-none">Soin</span>
                   </button>
                   <button onClick={() => setShowCareList(p => ({ ...p, [lapin.id]: !p[lapin.id] }))}
-                    className="flex flex-col items-center justify-center gap-1 py-2.5 bg-purple-600 text-white rounded-xl active:scale-95 transition-all">
+                    className="flex flex-col items-center justify-center gap-1 py-2.5 bg-purple-600 text-white rounded-xl active:opacity-75 transition-colors">
                     <span className="text-base leading-none">📋</span>
                     <span className="text-[9px] font-bold leading-none">Histo.</span>
                   </button>
                   <button onClick={() => supprimerLapin(lapin.id)}
-                    className="flex flex-col items-center justify-center gap-1 py-2.5 bg-red-500 text-white rounded-xl active:scale-95 transition-all">
+                    className="flex flex-col items-center justify-center gap-1 py-2.5 bg-red-500 text-white rounded-xl active:opacity-75 transition-colors">
                     <span className="text-base leading-none">🗑️</span>
                     <span className="text-[9px] font-bold leading-none">Suppr.</span>
                   </button>
@@ -331,7 +374,7 @@ export default function CheptelPage() {
                       placeholder="Notes…" rows={2}
                       className="w-full border border-indigo-200 rounded-lg px-3 py-2 text-xs bg-white resize-none" />
                     <button onClick={() => ajouterSoin(lapin.id)}
-                      className="w-full bg-indigo-600 text-white font-bold py-2 rounded-lg text-xs active:scale-95">
+                      className="w-full bg-indigo-600 text-white font-bold py-2 rounded-lg text-xs active:opacity-75">
                       Enregistrer le soin
                     </button>
                   </div>

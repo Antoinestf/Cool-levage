@@ -20,9 +20,30 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  /* Lissage de la police pour un rendu ultra propre sur l'écran du téléphone */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Ta police d'origine restaurée */
   font-family: Arial, Helvetica, sans-serif;
+  /* Améliore le scroll sur Android */
+  overscroll-behavior-y: contain;
+}
+
+/* ── Optimisations tactile Android ──────────────────────────────────────────
+   - Supprime le délai 300ms au tap (anciens navigateurs Android)
+   - Supprime le flash gris natif au tap
+   - Empêche la sélection de texte accidentelle sur les boutons               */
+button, a, [role="button"], select, input[type="submit"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ── Respect du mode économie de batterie / accessibilité ───────────────────
+   Désactive toutes les animations si l'utilisateur l'a demandé              */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

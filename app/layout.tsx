@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from "next";
+﻿import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import PwaProvider from "@/components/PwaProvider";
 import NotifManager from "@/components/NotifManager";
@@ -40,7 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="flex h-screen bg-gray-100">
 
           {/* ── Sidebar — visible uniquement ≥ md ────────────────────────── */}
-          <aside className="hidden md:flex w-64 bg-zinc-900 text-white flex-col shadow-xl shrink-0">
+          <aside className="hidden md:flex w-64 bg-zinc-900 text-white flex-col shadow-md shrink-0">
             <div className="p-5 border-b border-zinc-800">
               <h2 className="text-xl font-bold tracking-tight">Coolélevage</h2>
               <p className="text-zinc-500 text-[10px] mt-0.5">Fonctionne sans internet 📵</p>

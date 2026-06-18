@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 /**
  * NotifManager — Rappels automatiques pour l'éleveur
@@ -276,7 +276,7 @@ export default function NotifManager() {
       {/* ── Bandeau demande de permission ─────────────────────────────────── */}
       {bandeauVisible && permission === "default" && (
         <div className="fixed bottom-20 md:bottom-4 left-1/2 -translate-x-1/2 z-[9996] w-[calc(100%-2rem)] max-w-sm">
-          <div className="bg-zinc-900 text-white rounded-2xl shadow-2xl p-4">
+          <div className="bg-zinc-900 text-white rounded-2xl shadow-md p-4">
             <div className="flex gap-3 items-start mb-3">
               <span className="text-2xl shrink-0">🔔</span>
               <div>
@@ -295,7 +295,7 @@ export default function NotifManager() {
               </button>
               <button
                 onClick={demanderPermission}
-                className="flex-1 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 active:scale-95 transition-all"
+                className="flex-1 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 active:opacity-75 transition-colors"
               >
                 ✅ Activer les rappels
               </button>
@@ -307,7 +307,7 @@ export default function NotifManager() {
       {/* ── Confirmation discrète quand des notifs ont été envoyées ──────── */}
       {notifEnvoyees > 0 && (
         <div
-          className="fixed top-12 left-1/2 -translate-x-1/2 z-[9996] bg-green-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg transition-all"
+          className="fixed top-12 left-1/2 -translate-x-1/2 z-[9996] bg-green-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg transition-colors"
           onClick={() => setNotifEnvoyees(0)}
         >
           🔔 {notifEnvoyees} rappel{notifEnvoyees > 1 ? "s" : ""} envoyé{notifEnvoyees > 1 ? "s" : ""}

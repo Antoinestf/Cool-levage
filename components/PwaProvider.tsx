@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useEffect, useState } from "react";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -96,7 +96,7 @@ export default function PwaProvider() {
       {/* ── Bouton d'installation (Android/Chrome) ────────────────────────── */}
       {promptInstall && !installee && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[9998] w-[calc(100%-2rem)] max-w-sm">
-          <div className="bg-indigo-700 text-white rounded-2xl shadow-2xl p-4 flex items-center gap-3">
+          <div className="bg-indigo-700 text-white rounded-2xl shadow-md p-4 flex items-center gap-3">
             <span className="text-2xl">📲</span>
             <div className="flex-1 min-w-0">
               <p className="font-bold text-sm">Installer l'application</p>

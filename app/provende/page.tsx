@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 
@@ -305,7 +305,7 @@ export default function ProvendePage() {
       <div className="flex gap-2 mb-6 bg-gray-100 p-1 rounded-xl w-fit">
         {(["Stocks", "Recettes", "Prix"] as const).map((tab) => (
           <button key={tab} onClick={() => setActiveTab(tab)}
-            className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
               activeTab === tab
                 ? "bg-white text-gray-900 shadow-sm border border-gray-200"
                 : "text-gray-500 hover:text-gray-800"
