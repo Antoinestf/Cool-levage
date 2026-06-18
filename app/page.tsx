@@ -127,6 +127,88 @@ function NotifWidget() {
     setRefus(true);
   };
 
+  // ── Export .ics — calendrier natif (Google / Apple) ───────────────────────
+  const exporterAgenda = () => {
+    const auj = new Date(); auj.setHours(0, 0, 0, 0);
+    const saillies: Saillie[] = JSON.parse(localStorage.getItem('ferme_reproduction') || '[]');
+    const dtstamp = new Date().toISOString().replace(/[-:.]/g, '').slice(0, 15) + 'Z';
+
+    // Formate une date "YYYY-MM-DD" en "YYYYMMDD" pour l'ICS
+    const toICS   = (d: string) => d.replace(/-/g, '');
+    // Calcule le lendemain (DTEND exclusif pour les événements journée entière)
+    const nextDay = (d: string) => {
+      const dt = new Date(d); dt.setDate(dt.getDate() + 1);
+      return dt.toISOString().slice(0, 10).replace(/-/g, '');
+    };
+    // Construit un bloc VEVENT avec alarme J-1
+    const vevent = (uid: string, date: string, summary: string, desc: string) => [
+      'BEGIN:VEVENT',
+      `UID:${uid}@coolelevage`,
+      `DTSTAMP:${dtstamp}`,
+      `DTSTART;VALUE=DATE:${toICS(date)}`,
+      `DTEND;VALUE=DATE:${nextDay(date)}`,
+      `SUMMARY:${summary}`,
+      `DESCRIPTION:${desc}`,
+      'BEGIN:VALARM',
+      'TRIGGER:-P1D',      // Rappel la veille
+      'ACTION:DISPLAY',
+      `DESCRIPTION:${summary}`,
+      'END:VALARM',
+      'END:VEVENT',
+    ].join('\r\n');
+
+    const events: string[] = [];
+    for (const s of saillies) {
+      // Palpation — saillies "En attente" avec date future
+      if (s.statut === 'En attente' && s.datePalpation && new Date(s.datePalpation) >= auj)
+        events.push(vevent(
+          `palp-${s.id}`, s.datePalpation,
+          `🔬 Palpation — ${s.tatouageFemelle}`,
+          `Verifier la gestation de ${s.tatouageFemelle} x ${s.tatouageMale}`,
+        ));
+      // Mise-bas — gestantes avec date future
+      if (s.statut === 'Gestante' && s.dateMiseBas && new Date(s.dateMiseBas) >= auj)
+        events.push(vevent(
+          `misebas-${s.id}`, s.dateMiseBas,
+          `🍼 Mise-bas — ${s.tatouageFemelle}`,
+          `Mise-bas prevue. Preparez la cage maternite.`,
+        ));
+      // Sevrage — gestantes ou mise-bas terminée avec date future
+      if ((s.statut === 'Gestante' || s.statut === 'Mise-bas terminée') && s.dateSevrage && new Date(s.dateSevrage) >= auj)
+        events.push(vevent(
+          `sevrage-${s.id}`, s.dateSevrage,
+          `✂️ Sevrage — ${s.tatouageFemelle}`,
+          `Separer les lapereaux de ${s.tatouageFemelle}. Preparez les cages.`,
+        ));
+    }
+
+    if (!events.length) {
+      alert('Aucun événement futur à exporter.\nAjoutez des saillies dans la section Naissances.');
+      return;
+    }
+
+    const ics = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//CoolElevage//Calendrier//FR',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      'X-WR-CALNAME:Mon Elevage',
+      ...events,
+      'END:VCALENDAR',
+    ].join('\r\n');
+
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `elevage-${new Date().toISOString().slice(0, 10)}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   if (!monted || typeof window === 'undefined' || !('Notification' in window)) return null;
 
   const actifs = perm === 'granted' && !refus;
@@ -159,6 +241,17 @@ function NotifWidget() {
           🔔 Activer les rappels
         </button>
       )}
+
+      {/* ── Export agenda (toujours visible) ──────────────────────────────── */}
+      <div className="mt-3 pt-3 border-t border-gray-100">
+        <button onClick={exporterAgenda}
+          className="w-full py-2 text-xs font-bold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 active:opacity-75 transition-colors">
+          📅 Exporter vers l&apos;Agenda
+        </button>
+        <p className="text-[10px] text-gray-400 text-center mt-1.5 leading-snug">
+          Génère un fichier .ics · Compatible Google &amp; Apple Calendar
+        </p>
+      </div>
     </div>
   );
 }
