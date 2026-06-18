@@ -1,7 +1,10 @@
 ﻿"use client";
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import MeteoWidget from '@/components/MeteoWidget';
+
+const ScannerModal = dynamic(() => import('@/components/ScannerModal'), { ssr: false });
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -168,6 +171,7 @@ export default function TableauDeBord() {
   const [stocks, setStocks]         = useState<Stock[]>([]);
   const [isLoaded, setIsLoaded]     = useState(false);
   const [alerteChaleur, setAlerteChaleur] = useState<number | null>(null);
+  const [scannerOuvert, setScannerOuvert] = useState(false);
 
   const handleChaleur = useCallback((tempMax: number) => {
     setAlerteChaleur(tempMax);
@@ -326,6 +330,19 @@ export default function TableauDeBord() {
 
   return (
     <div className="p-4 md:p-6 bg-gray-50 min-h-screen">
+
+      {/* ── Modale scanner QR ─────────────────────────────────────────────── */}
+      {scannerOuvert && <ScannerModal onClose={() => setScannerOuvert(false)} />}
+
+      {/* ── FAB Scanner ───────────────────────────────────────────────────── */}
+      <button
+        onClick={() => setScannerOuvert(true)}
+        className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-40 w-14 h-14 rounded-full bg-indigo-600 text-white shadow-lg flex items-center justify-center text-2xl hover:bg-indigo-700 active:scale-95 active:opacity-90 transition-all"
+        aria-label="Scanner un QR Code lapin"
+        title="Scanner un QR Code"
+      >
+        📷
+      </button>
 
       {/* ── En-tête ─────────────────────────────────────────────────────── */}
       <header className="mb-5">
